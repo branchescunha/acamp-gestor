@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import RoleAccessNotice from '../components/RoleAccessNotice'
 import ResponsiveTable from '../components/ResponsiveTable'
@@ -100,7 +101,7 @@ export default function AccessRequests() {
     )
     setSuccess(
       status === 'approved'
-        ? 'Solicitação aprovada. A conta ainda deve ser criada manualmente no Supabase Auth.'
+        ? 'Solicitação aprovada. Crie o usuário no Supabase Auth e depois cadastre o perfil em Usuários.'
         : 'Solicitação recusada.',
     )
     setUpdatingId(null)
@@ -236,7 +237,14 @@ export default function AccessRequests() {
 
       <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-sm text-yellow-100">
         Usuários administrativos ainda devem ser criados manualmente no
-        Supabase Auth após a aprovação.
+        Supabase Auth após a aprovação. Depois, cadastre o perfil em{' '}
+        <Link
+          to="/admin/usuarios"
+          className="font-semibold text-yellow-300 hover:text-yellow-200"
+        >
+          Usuários
+        </Link>
+        .
       </div>
 
       {error && (

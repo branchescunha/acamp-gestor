@@ -10,6 +10,7 @@ import {
   LogOut,
   PlusCircle,
   Trophy,
+  UserCog,
   UserRound,
   Users,
   X,
@@ -43,6 +44,9 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
     { label: 'Acampamentos', path: '/admin/acampamentos', icon: TentTree },
     ...(isAdmin
       ? [{ label: 'Solicitações', path: '/admin/solicitacoes', icon: FileUser }]
+      : []),
+    ...(isAdmin
+      ? [{ label: 'Usuários', path: '/admin/usuarios', icon: UserCog }]
       : []),
     {
       label: 'Equipes',
