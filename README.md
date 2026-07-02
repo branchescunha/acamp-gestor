@@ -86,7 +86,7 @@ Depois de criar o usuário manualmente no Supabase Auth, também é necessário 
 
 O ADMIN pode criar e editar perfis em `/admin/usuarios`, informando o User UID do usuário já existente no Supabase Auth. A tela permite ajustar nome, e-mail, papel e status, mas não cria usuários Auth automaticamente.
 
-O ADMIN também pode organizar convites administrativos em `/admin/convites`. Convites registram nome, e-mail, papel, status e observações, mas não criam usuário Auth, não criam profile automaticamente e não enviam e-mail.
+O ADMIN também pode organizar convites administrativos em `/admin/convites`. Convites registram nome, e-mail, papel, status, observações e controle de envio assistido, mas não criam usuário Auth, não criam profile automaticamente e não enviam e-mail real automaticamente.
 
 Convites podem ser aceitos pela rota pública `/convite/:token`. O usuário Auth ainda precisa existir antes. Ao aceitar o convite autenticado com o e-mail correto, o sistema cria ou atualiza o profile do usuário logado e marca o convite como aceito.
 
@@ -94,9 +94,11 @@ Fluxo atual para criar um GESTOR:
 
 1. Criar ou registrar um convite em `/admin/convites`.
 2. Criar o usuário em Supabase Auth.
-3. Enviar manualmente o link `/convite/:token` ao convidado.
-4. O convidado entra com o e-mail convidado.
-5. O convidado ativa o acesso pelo link do convite.
+3. Copiar o link ou a mensagem pronta em `/admin/convites`.
+4. Enviar manualmente pelo canal escolhido ou abrir o cliente local com `mailto:`.
+5. Marcar o convite como enviado para controle interno.
+6. O convidado entra com o e-mail convidado.
+7. O convidado ativa o acesso pelo link do convite.
 
 A recuperação de senha começa em `/recuperar-senha` e a redefinição acontece em `/redefinir-senha`.
 
@@ -199,6 +201,14 @@ supabase/sql/008_create_invitation_acceptance_functions.sql
 
 Esse script cria as funções RPC `get_invitation_by_token` e `accept_invitation`. A primeira expõe apenas dados mínimos do convite pelo token. A segunda permite que um usuário autenticado com o e-mail correto aceite o convite, criando ou atualizando o profile correspondente. O script não cria usuário Auth automaticamente e não usa service role.
 
+Para habilitar o controle de envio assistido de convites, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/009_add_invitation_delivery_fields.sql
+```
+
+Esse script adiciona `sent_at` e `sent_by` em `invitations` para registrar quando um ADMIN marcou o convite como enviado. A tela `/admin/convites` permite copiar o link, copiar uma mensagem pronta, abrir o cliente de e-mail local com `mailto:` e marcar o convite como enviado. O sistema ainda não envia e-mail real automaticamente, não usa Edge Function e não usa service role para criar usuários.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
@@ -249,7 +259,7 @@ O AcampGestor já cobre o fluxo principal de gestão de acampamentos, pontuaçã
 - `camp_id` ainda é nullable para permitir migração gradual de dados antigos.
 - Roles e permissões administrativas foram estruturadas com `profiles`, ADMIN e GESTOR. A criação de usuários no Supabase Auth ainda é manual nesta versão.
 - A tela `/admin/usuarios` gerencia apenas profiles; ela não cria contas no Supabase Auth e não envia convites automáticos.
-- A tela `/admin/convites` organiza convites administrativos e gera links públicos de aceite, mas não automatiza criação de usuários Auth.
+- A tela `/admin/convites` organiza convites administrativos, gera links públicos de aceite e auxilia o envio manual, mas não automatiza criação de usuários Auth nem envio real de e-mails.
 - A rota `/convite/:token` aceita convites apenas para usuários autenticados com o e-mail convidado.
 
 ## Estrutura do Projeto

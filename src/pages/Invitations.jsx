@@ -42,6 +42,7 @@ export default function Invitations() {
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [sendingId, setSendingId] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
@@ -52,7 +53,7 @@ export default function Invitations() {
     const { data, error: loadError } = await supabase
       .from('invitations')
       .select(
-        'id, name, email, role, status, token, notes, created_by, created_at, updated_at, accepted_at, canceled_at',
+        'id, name, email, role, status, token, notes, created_by, created_at, updated_at, accepted_at, canceled_at, sent_at, sent_by',
       )
       .order('created_at', { ascending: false })
 
@@ -229,7 +230,11 @@ export default function Invitations() {
   async function handleCopyLink(token) {
     const invitationUrl = getInvitationUrl(token)
 
-    if (!invitationUrl || !navigator.clipboard) return
+    if (!invitationUrl || !navigator.clipboard) {
+      setError('Não foi possível acessar a área de transferência do navegador.')
+      setSuccess('')
+      return
+    }
 
     try {
       await navigator.clipboard.writeText(invitationUrl)
@@ -239,6 +244,90 @@ export default function Invitations() {
       console.error(copyError)
       setError('Não foi possível copiar o link automaticamente.')
     }
+  }
+
+  function getInvitationMessage(invitation) {
+    const invitationUrl = getInvitationUrl(invitation.token)
+    const roleLabel = roleLabels[invitation.role] || invitation.role
+
+    return `Olá, ${invitation.name}.
+
+Você recebeu um convite para acessar o AcampGestor como ${roleLabel}.
+
+Acesse o link abaixo para ativar seu acesso:
+${invitationUrl}
+
+Use o mesmo e-mail convidado: ${invitation.email}.
+
+Observação: sua conta precisa existir previamente. Caso ainda não tenha recebido seus dados de acesso, entre em contato com a organização responsável.`
+  }
+
+  function getMailtoUrl(invitation) {
+    const subject = 'Convite para acessar o AcampGestor'
+    const body = getInvitationMessage(invitation)
+
+    return `mailto:${invitation.email}?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`
+  }
+
+  async function handleCopyMessage(invitation) {
+    if (!navigator.clipboard) {
+      setError('Não foi possível acessar a área de transferência do navegador.')
+      setSuccess('')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(getInvitationMessage(invitation))
+      setSuccess('Mensagem do convite copiada.')
+      setError('')
+    } catch (copyError) {
+      console.error(copyError)
+      setError('Não foi possível copiar a mensagem automaticamente.')
+      setSuccess('')
+    }
+  }
+
+  async function handleMarkAsSent(invitation) {
+    if (!session?.user?.id) {
+      setError('Não foi possível identificar o usuário autenticado.')
+      setSuccess('')
+      return
+    }
+
+    setSendingId(invitation.id)
+    setError('')
+    setSuccess('')
+
+    const sentAt = new Date().toISOString()
+    const { data, error: sendError } = await supabase
+      .from('invitations')
+      .update({
+        sent_at: sentAt,
+        sent_by: session.user.id,
+        updated_at: sentAt,
+      })
+      .eq('id', invitation.id)
+      .select(
+        'id, name, email, role, status, token, notes, created_by, created_at, updated_at, accepted_at, canceled_at, sent_at, sent_by',
+      )
+      .single()
+
+    if (sendError) {
+      console.error(sendError)
+      setError('Não foi possível marcar o convite como enviado.')
+      setSendingId(null)
+      return
+    }
+
+    setInvitations((currentInvitations) =>
+      currentInvitations.map((currentInvitation) =>
+        currentInvitation.id === invitation.id ? data : currentInvitation,
+      ),
+    )
+    setSuccess('Convite marcado como enviado.')
+    setSendingId(null)
   }
 
   const columns = [
@@ -288,8 +377,28 @@ export default function Invitations() {
       ),
     },
     {
+      key: 'delivery',
+      label: 'Envio',
+      render: (invitation) => (
+        <div className="flex flex-col gap-1 text-sm">
+          <span
+            className={
+              invitation.sent_at ? 'text-emerald-300' : 'text-zinc-400'
+            }
+          >
+            {invitation.sent_at ? 'Enviado' : 'Não enviado'}
+          </span>
+          {invitation.sent_at && (
+            <span className="text-xs text-zinc-500">
+              {formatDate(invitation.sent_at)}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       key: 'link',
-      label: 'Link',
+      label: 'Envio assistido',
       render: (invitation) => {
         const invitationUrl = getInvitationUrl(invitation.token)
 
@@ -314,6 +423,32 @@ export default function Invitations() {
               className="text-left text-xs text-zinc-400 transition hover:text-white"
             >
               Copiar link
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleCopyMessage(invitation)}
+              className="text-left text-xs text-zinc-400 transition hover:text-white"
+            >
+              Copiar mensagem
+            </button>
+
+            <a
+              href={getMailtoUrl(invitation)}
+              className="text-xs font-semibold text-yellow-400 transition hover:text-yellow-300"
+            >
+              Enviar por e-mail
+            </a>
+
+            <button
+              type="button"
+              disabled={sendingId === invitation.id}
+              onClick={() => handleMarkAsSent(invitation)}
+              className="text-left text-xs text-zinc-400 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {sendingId === invitation.id
+                ? 'Marcando...'
+                : 'Marcar como enviado'}
             </button>
           </div>
         ) : (
