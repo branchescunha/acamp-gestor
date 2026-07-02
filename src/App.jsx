@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import RequestAccess from './pages/RequestAccess'
+import AcceptInvitation from './pages/AcceptInvitation'
 import Admin from './pages/Admin'
 import Account from './pages/Account'
 import AccessRequests from './pages/AccessRequests'
@@ -34,6 +35,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
 
         <Route path="/solicitar-acesso" element={<RequestAccess />} />
+
+        <Route path="/convite/:token" element={<AcceptInvitation />} />
 
         <Route path="/recuperar-senha" element={<ForgotPassword />} />
         <Route
