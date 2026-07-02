@@ -49,6 +49,7 @@ Produção: https://tribes-tournament.vercel.app
 - `/ranking`: página informativa para solicitar ou acessar um link público de ranking.
 - `/login`: acesso ao painel administrativo.
 - `/solicitar-acesso`: solicitação controlada de acesso administrativo.
+- `/convite/:token`: aceite público de convite administrativo.
 - `/recuperar-senha`: solicitação de recuperação de senha.
 - `/redefinir-senha`: criação de nova senha via Supabase Auth.
 - `/admin`: área administrativa geral e compatibilidade com o fluxo antigo.
@@ -87,14 +88,15 @@ O ADMIN pode criar e editar perfis em `/admin/usuarios`, informando o User UID d
 
 O ADMIN também pode organizar convites administrativos em `/admin/convites`. Convites registram nome, e-mail, papel, status e observações, mas não criam usuário Auth, não criam profile automaticamente e não enviam e-mail.
 
+Convites podem ser aceitos pela rota pública `/convite/:token`. O usuário Auth ainda precisa existir antes. Ao aceitar o convite autenticado com o e-mail correto, o sistema cria ou atualiza o profile do usuário logado e marca o convite como aceito.
+
 Fluxo atual para criar um GESTOR:
 
 1. Criar ou registrar um convite em `/admin/convites`.
 2. Criar o usuário em Supabase Auth.
-3. Copiar o User UID.
-4. Abrir `/admin/usuarios`.
-5. Criar o profile com role `gestor` e status `active`.
-6. Voltar em `/admin/convites` e marcar o convite como aceito.
+3. Enviar manualmente o link `/convite/:token` ao convidado.
+4. O convidado entra com o e-mail convidado.
+5. O convidado ativa o acesso pelo link do convite.
 
 A recuperação de senha começa em `/recuperar-senha` e a redefinição acontece em `/redefinir-senha`.
 
@@ -189,6 +191,14 @@ supabase/sql/007_create_invitations.sql
 
 Esse script cria a tabela `invitations`, ativa RLS e permite que apenas ADMIN leia, crie e atualize convites. A criação de usuários Auth, envio de e-mail, Edge Function e uso de service role continuam fora desta versão.
 
+Para habilitar o aceite público de convites, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/008_create_invitation_acceptance_functions.sql
+```
+
+Esse script cria as funções RPC `get_invitation_by_token` e `accept_invitation`. A primeira expõe apenas dados mínimos do convite pelo token. A segunda permite que um usuário autenticado com o e-mail correto aceite o convite, criando ou atualizando o profile correspondente. O script não cria usuário Auth automaticamente e não usa service role.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
@@ -239,7 +249,8 @@ O AcampGestor já cobre o fluxo principal de gestão de acampamentos, pontuaçã
 - `camp_id` ainda é nullable para permitir migração gradual de dados antigos.
 - Roles e permissões administrativas foram estruturadas com `profiles`, ADMIN e GESTOR. A criação de usuários no Supabase Auth ainda é manual nesta versão.
 - A tela `/admin/usuarios` gerencia apenas profiles; ela não cria contas no Supabase Auth e não envia convites automáticos.
-- A tela `/admin/convites` organiza convites administrativos, mas não aceita convites publicamente e não automatiza criação de usuários.
+- A tela `/admin/convites` organiza convites administrativos e gera links públicos de aceite, mas não automatiza criação de usuários Auth.
+- A rota `/convite/:token` aceita convites apenas para usuários autenticados com o e-mail convidado.
 
 ## Estrutura do Projeto
 

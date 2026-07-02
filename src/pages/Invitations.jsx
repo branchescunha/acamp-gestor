@@ -221,6 +221,26 @@ export default function Invitations() {
     return new Date(value).toLocaleString('pt-BR')
   }
 
+  function getInvitationUrl(token) {
+    if (!token || typeof window === 'undefined') return ''
+    return `${window.location.origin}/convite/${token}`
+  }
+
+  async function handleCopyLink(token) {
+    const invitationUrl = getInvitationUrl(token)
+
+    if (!invitationUrl || !navigator.clipboard) return
+
+    try {
+      await navigator.clipboard.writeText(invitationUrl)
+      setSuccess('Link do convite copiado.')
+      setError('')
+    } catch (copyError) {
+      console.error(copyError)
+      setError('Não foi possível copiar o link automaticamente.')
+    }
+  }
+
   const columns = [
     {
       key: 'name',
@@ -266,6 +286,40 @@ export default function Invitations() {
           {formatDate(invitation.created_at)}
         </span>
       ),
+    },
+    {
+      key: 'link',
+      label: 'Link',
+      render: (invitation) => {
+        const invitationUrl = getInvitationUrl(invitation.token)
+
+        return invitationUrl ? (
+          <div className="flex flex-col gap-2">
+            <a
+              href={invitationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm font-semibold text-yellow-400 hover:text-yellow-300"
+            >
+              Abrir convite
+            </a>
+
+            <span className="break-all text-xs text-zinc-500">
+              {invitationUrl}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => handleCopyLink(invitation.token)}
+              className="text-left text-xs text-zinc-400 transition hover:text-white"
+            >
+              Copiar link
+            </button>
+          </div>
+        ) : (
+          <span className="text-xs text-zinc-500">Link indisponível</span>
+        )
+      },
     },
     {
       key: 'actions',
