@@ -10,6 +10,7 @@ Produção: https://tribes-tournament.vercel.app
 - Painel administrativo protegido por autenticação.
 - Perfis administrativos com separação entre ADMIN e GESTOR.
 - Gestão administrativa de perfis de acesso.
+- Gestão de organizações, igrejas, escolas ou instituições.
 - Convites administrativos para organizar criação manual de usuários.
 - Solicitação controlada de acesso administrativo.
 - Revisão administrativa de solicitações de acesso.
@@ -54,6 +55,7 @@ Produção: https://tribes-tournament.vercel.app
 - `/redefinir-senha`: criação de nova senha via Supabase Auth.
 - `/admin`: área administrativa geral e compatibilidade com o fluxo antigo.
 - `/admin/conta`: configurações da conta.
+- `/admin/organizacoes`: gestão de organizações.
 - `/admin/acampamentos`: gestão e seleção do acampamento ativo.
 - `/admin/solicitacoes`: revisão de solicitações de acesso.
 - `/admin/usuarios`: gestão de perfis de acesso.
@@ -209,6 +211,18 @@ supabase/sql/009_add_invitation_delivery_fields.sql
 
 Esse script adiciona `sent_at` e `sent_by` em `invitations` para registrar quando um ADMIN marcou o convite como enviado. A tela `/admin/convites` permite copiar o link, copiar uma mensagem pronta, abrir o cliente de e-mail local com `mailto:` e marcar o convite como enviado. O sistema ainda não envia e-mail real automaticamente, não usa Edge Function e não usa service role para criar usuários.
 
+Para habilitar a base de organizações, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/010_create_organizations.sql
+```
+
+Esse script cria `organizations` e `organization_members`, adiciona `organization_id` nullable em `camps`, cria índices e configura RLS para ADMIN e GESTOR. A estrutura permite evoluir de usuário -> acampamentos para organização -> membros -> acampamentos sem migrar ou apagar dados antigos automaticamente.
+
+A rota `/admin/organizacoes` permite que ADMIN veja todas as organizações e que GESTOR veja as organizações em que participa. Ao criar uma organização pela tela, o usuário logado é vinculado como `owner` em `organization_members`. A gestão avançada de membros fica para evolução futura.
+
+Em `/admin/acampamentos`, o campo Organização é opcional. Acampamentos antigos sem `organization_id` continuam funcionando, e a migração desses registros deve ser feita manualmente apenas quando houver necessidade.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
@@ -248,7 +262,7 @@ Produção:
 
 MVP funcional em evolução.
 
-O AcampGestor já cobre o fluxo principal de gestão de acampamentos, pontuação, ranking público por URL, administração, solicitações de acesso, seleção de acampamento ativo, dados operacionais por acampamento e exportação. Próximas evoluções devem tratar personalização por evento, identidade visual configurável e suporte mais avançado para uso por outras igrejas.
+O AcampGestor já cobre o fluxo principal de gestão de acampamentos, organizações, pontuação, ranking público por URL, administração, solicitações de acesso, seleção de acampamento ativo, dados operacionais por acampamento e exportação. Próximas evoluções devem tratar personalização por evento, identidade visual configurável e suporte mais avançado para uso por outras igrejas.
 
 ## Observações Técnicas
 
@@ -257,6 +271,7 @@ O AcampGestor já cobre o fluxo principal de gestão de acampamentos, pontuaçã
 - A correção automática dessas vulnerabilidades exige `npm audit fix --force` e alteração insegura/downgrade do `exceljs`; por isso, foi aceita temporariamente.
 - A rota `/admin/tribos` foi mantida por compatibilidade técnica, embora a comunicação visível use "equipes".
 - `camp_id` ainda é nullable para permitir migração gradual de dados antigos.
+- `organization_id` em `camps` ainda é nullable para permitir adoção gradual de organizações.
 - Roles e permissões administrativas foram estruturadas com `profiles`, ADMIN e GESTOR. A criação de usuários no Supabase Auth ainda é manual nesta versão.
 - A tela `/admin/usuarios` gerencia apenas profiles; ela não cria contas no Supabase Auth e não envia convites automáticos.
 - A tela `/admin/convites` organiza convites administrativos, gera links públicos de aceite e auxilia o envio manual, mas não automatiza criação de usuários Auth nem envio real de e-mails.
