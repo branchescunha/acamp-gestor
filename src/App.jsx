@@ -14,6 +14,7 @@ import Account from './pages/Account'
 import AccessRequests from './pages/AccessRequests'
 import Camps from './pages/Camps'
 import Organizations from './pages/Organizations'
+import OrganizationMembers from './pages/OrganizationMembers'
 import Users from './pages/Users'
 import Invitations from './pages/Invitations'
 import Dashboard from './pages/Dashboard'
@@ -87,6 +88,10 @@ export default function App() {
           />
           <Route path="acampamentos" element={<Camps />} />
           <Route path="organizacoes" element={<Organizations />} />
+          <Route
+            path="organizacoes/:organizationId/membros"
+            element={<OrganizationMembers />}
+          />
           <Route
             path="account"
             element={<Navigate to="/admin/conta" replace />}

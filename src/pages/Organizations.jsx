@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import RoleAccessNotice from '../components/RoleAccessNotice'
@@ -227,13 +228,22 @@ export default function Organizations() {
       key: 'actions',
       label: 'Ações',
       render: (organization) => (
-        <button
-          type="button"
-          onClick={() => handleEdit(organization)}
-          className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:bg-zinc-800"
-        >
-          Editar
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row md:justify-start">
+          <Link
+            to={`/admin/organizacoes/${organization.id}/membros`}
+            className="rounded-lg border border-yellow-500/40 px-3 py-2 text-xs font-semibold text-yellow-300 transition hover:bg-yellow-500/10"
+          >
+            Membros
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => handleEdit(organization)}
+            className="rounded-lg border border-zinc-700 px-3 py-2 text-xs text-zinc-300 transition hover:bg-zinc-800"
+          >
+            Editar
+          </button>
+        </div>
       ),
     },
   ]
