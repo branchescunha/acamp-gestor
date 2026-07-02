@@ -71,6 +71,15 @@ export default function AccessRequests() {
     return new Date(value).toLocaleString('pt-BR')
   }
 
+  function getInvitationPath(request) {
+    const params = new URLSearchParams({
+      name: request.name || '',
+      email: request.email || '',
+    })
+
+    return `/admin/convites?${params.toString()}`
+  }
+
   async function reviewRequest(requestId, status) {
     setUpdatingId(requestId)
     setError('')
@@ -101,7 +110,7 @@ export default function AccessRequests() {
     )
     setSuccess(
       status === 'approved'
-        ? 'Solicitação aprovada. Crie o usuário no Supabase Auth e depois cadastre o perfil em Usuários.'
+        ? 'Solicitação aprovada. Crie um convite administrativo, depois crie o usuário no Supabase Auth e cadastre o perfil em Usuários.'
         : 'Solicitação recusada.',
     )
     setUpdatingId(null)
@@ -178,6 +187,13 @@ export default function AccessRequests() {
               Recusar
             </button>
           </div>
+        ) : request.status === 'approved' ? (
+          <Link
+            to={getInvitationPath(request)}
+            className="text-xs font-semibold text-yellow-400 hover:text-yellow-300"
+          >
+            Criar convite
+          </Link>
         ) : (
           <span className="text-xs text-zinc-500">Revisada</span>
         ),
@@ -237,7 +253,14 @@ export default function AccessRequests() {
 
       <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-sm text-yellow-100">
         Usuários administrativos ainda devem ser criados manualmente no
-        Supabase Auth após a aprovação. Depois, cadastre o perfil em{' '}
+        Supabase Auth após a aprovação. Organize o processo em{' '}
+        <Link
+          to="/admin/convites"
+          className="font-semibold text-yellow-300 hover:text-yellow-200"
+        >
+          Convites
+        </Link>{' '}
+        e depois cadastre o perfil em{' '}
         <Link
           to="/admin/usuarios"
           className="font-semibold text-yellow-300 hover:text-yellow-200"

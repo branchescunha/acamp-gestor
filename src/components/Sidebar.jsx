@@ -8,6 +8,7 @@ import {
   History,
   LayoutDashboard,
   LogOut,
+  MailPlus,
   PlusCircle,
   Trophy,
   UserCog,
@@ -47,6 +48,9 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
       : []),
     ...(isAdmin
       ? [{ label: 'Usuários', path: '/admin/usuarios', icon: UserCog }]
+      : []),
+    ...(isAdmin
+      ? [{ label: 'Convites', path: '/admin/convites', icon: MailPlus }]
       : []),
     {
       label: 'Equipes',

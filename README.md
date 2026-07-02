@@ -10,6 +10,7 @@ Produção: https://tribes-tournament.vercel.app
 - Painel administrativo protegido por autenticação.
 - Perfis administrativos com separação entre ADMIN e GESTOR.
 - Gestão administrativa de perfis de acesso.
+- Convites administrativos para organizar criação manual de usuários.
 - Solicitação controlada de acesso administrativo.
 - Revisão administrativa de solicitações de acesso.
 - Recuperação e redefinição de senha.
@@ -55,6 +56,7 @@ Produção: https://tribes-tournament.vercel.app
 - `/admin/acampamentos`: gestão e seleção do acampamento ativo.
 - `/admin/solicitacoes`: revisão de solicitações de acesso.
 - `/admin/usuarios`: gestão de perfis de acesso.
+- `/admin/convites`: gestão de convites administrativos.
 - `/admin/tribos`: gestão de equipes.
 - `/admin/participantes`: gestão de participantes.
 - `/admin/pontuacao`: lançamentos de pontos e penalidades.
@@ -83,12 +85,16 @@ Depois de criar o usuário manualmente no Supabase Auth, também é necessário 
 
 O ADMIN pode criar e editar perfis em `/admin/usuarios`, informando o User UID do usuário já existente no Supabase Auth. A tela permite ajustar nome, e-mail, papel e status, mas não cria usuários Auth automaticamente.
 
+O ADMIN também pode organizar convites administrativos em `/admin/convites`. Convites registram nome, e-mail, papel, status e observações, mas não criam usuário Auth, não criam profile automaticamente e não enviam e-mail.
+
 Fluxo atual para criar um GESTOR:
 
-1. Criar o usuário em Supabase Auth.
-2. Copiar o User UID.
-3. Abrir `/admin/usuarios`.
-4. Criar o profile com role `gestor` e status `active`.
+1. Criar ou registrar um convite em `/admin/convites`.
+2. Criar o usuário em Supabase Auth.
+3. Copiar o User UID.
+4. Abrir `/admin/usuarios`.
+5. Criar o profile com role `gestor` e status `active`.
+6. Voltar em `/admin/convites` e marcar o convite como aceito.
 
 A recuperação de senha começa em `/recuperar-senha` e a redefinição acontece em `/redefinir-senha`.
 
@@ -175,6 +181,14 @@ supabase/sql/006_add_profile_email.sql
 
 Esse script adiciona `email` nullable em `profiles`, cria um índice único parcial para e-mails preenchidos e atualiza os grants de insert/update. Convites automáticos e criação automática de usuários Auth ficam para evolução futura.
 
+Para habilitar convites administrativos, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/007_create_invitations.sql
+```
+
+Esse script cria a tabela `invitations`, ativa RLS e permite que apenas ADMIN leia, crie e atualize convites. A criação de usuários Auth, envio de e-mail, Edge Function e uso de service role continuam fora desta versão.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
@@ -225,6 +239,7 @@ O AcampGestor já cobre o fluxo principal de gestão de acampamentos, pontuaçã
 - `camp_id` ainda é nullable para permitir migração gradual de dados antigos.
 - Roles e permissões administrativas foram estruturadas com `profiles`, ADMIN e GESTOR. A criação de usuários no Supabase Auth ainda é manual nesta versão.
 - A tela `/admin/usuarios` gerencia apenas profiles; ela não cria contas no Supabase Auth e não envia convites automáticos.
+- A tela `/admin/convites` organiza convites administrativos, mas não aceita convites publicamente e não automatiza criação de usuários.
 
 ## Estrutura do Projeto
 
