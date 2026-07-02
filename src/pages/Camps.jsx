@@ -16,6 +16,7 @@ const initialForm = {
   status: 'draft',
   slug: '',
   public_ranking_enabled: true,
+  organization_id: '',
 }
 
 const statusLabels = {
@@ -34,6 +35,7 @@ export default function Camps() {
   const { session } = useAuthContext()
   const { isAdmin } = useUserProfile()
   const [camps, setCamps] = useState([])
+  const [organizations, setOrganizations] = useState([])
   const [form, setForm] = useState(initialForm)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -59,7 +61,7 @@ export default function Camps() {
 
     const { data, error: loadError } = await supabase
       .from('camps')
-      .select('*')
+      .select('*, organizations(name)')
       .order('created_at', { ascending: false })
 
     if (loadError) {
@@ -73,15 +75,31 @@ export default function Camps() {
     setLoading(false)
   }, [])
 
+  const loadOrganizations = useCallback(async () => {
+    const { data, error: loadError } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .order('name', { ascending: true })
+
+    if (loadError) {
+      console.error(loadError)
+      setError('Não foi possível carregar as organizações.')
+      return
+    }
+
+    setOrganizations(data || [])
+  }, [])
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       void loadCamps()
+      void loadOrganizations()
     }, 0)
 
     return () => {
       window.clearTimeout(timeoutId)
     }
-  }, [loadCamps])
+  }, [loadCamps, loadOrganizations])
 
   function handleChange(event) {
     const { name, value, type, checked } = event.target
@@ -143,6 +161,7 @@ export default function Camps() {
       status: camp.status || 'draft',
       slug: camp.slug || '',
       public_ranking_enabled: camp.public_ranking_enabled ?? true,
+      organization_id: camp.organization_id || '',
     })
     setSlugTouched(true)
     setError('')
@@ -190,6 +209,7 @@ export default function Camps() {
       status: form.status,
       slug: form.slug.trim() || null,
       public_ranking_enabled: form.public_ranking_enabled,
+      organization_id: form.organization_id || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -272,6 +292,15 @@ export default function Camps() {
       key: 'theme',
       label: 'Tema',
       render: (camp) => <span className="text-zinc-400">{camp.theme || '-'}</span>,
+    },
+    {
+      key: 'organization',
+      label: 'Organização',
+      render: (camp) => (
+        <span className="text-zinc-400">
+          {camp.organizations?.name || 'Sem organização'}
+        </span>
+      ),
     },
     {
       key: 'dates',
@@ -426,6 +455,20 @@ export default function Camps() {
             placeholder="Tema, opcional"
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           />
+
+          <select
+            name="organization_id"
+            value={form.organization_id}
+            onChange={handleChange}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+          >
+            <option value="">Sem organização</option>
+            {organizations.map((organization) => (
+              <option key={organization.id} value={organization.id}>
+                {organization.name}
+              </option>
+            ))}
+          </select>
 
           <div className="xl:col-span-2">
             <input

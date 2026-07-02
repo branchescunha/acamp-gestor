@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   ClipboardCheck,
+  Building2,
   FileUser,
   TentTree,
   Swords,
@@ -43,6 +44,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
     },
     { label: 'Conta', path: '/admin/conta', icon: UserRound },
     { label: 'Acampamentos', path: '/admin/acampamentos', icon: TentTree },
+    { label: 'Organizações', path: '/admin/organizacoes', icon: Building2 },
     ...(isAdmin
       ? [{ label: 'Solicitações', path: '/admin/solicitacoes', icon: FileUser }]
       : []),
