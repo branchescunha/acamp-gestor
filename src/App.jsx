@@ -12,6 +12,7 @@ import Admin from './pages/Admin'
 import Account from './pages/Account'
 import AccessRequests from './pages/AccessRequests'
 import Camps from './pages/Camps'
+import Users from './pages/Users'
 import Dashboard from './pages/Dashboard'
 import Tribes from './pages/Tribes'
 import Participants from './pages/Participants'
@@ -60,6 +61,14 @@ export default function App() {
             element={
               <AdminOnlyRoute>
                 <AccessRequests />
+              </AdminOnlyRoute>
+            }
+          />
+          <Route
+            path="usuarios"
+            element={
+              <AdminOnlyRoute>
+                <Users />
               </AdminOnlyRoute>
             }
           />

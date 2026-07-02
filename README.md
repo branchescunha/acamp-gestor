@@ -9,6 +9,7 @@ Produção: https://tribes-tournament.vercel.app
 - Ranking público das equipes por URL do acampamento.
 - Painel administrativo protegido por autenticação.
 - Perfis administrativos com separação entre ADMIN e GESTOR.
+- Gestão administrativa de perfis de acesso.
 - Solicitação controlada de acesso administrativo.
 - Revisão administrativa de solicitações de acesso.
 - Recuperação e redefinição de senha.
@@ -53,6 +54,7 @@ Produção: https://tribes-tournament.vercel.app
 - `/admin/conta`: configurações da conta.
 - `/admin/acampamentos`: gestão e seleção do acampamento ativo.
 - `/admin/solicitacoes`: revisão de solicitações de acesso.
+- `/admin/usuarios`: gestão de perfis de acesso.
 - `/admin/tribos`: gestão de equipes.
 - `/admin/participantes`: gestão de participantes.
 - `/admin/pontuacao`: lançamentos de pontos e penalidades.
@@ -78,6 +80,15 @@ O cadastro aberto ainda não existe neste MVP. A rota `/solicitar-acesso` salva 
 Usuários administrativos ainda devem ser criados manualmente no Supabase Auth. A aprovação de uma solicitação em `/admin/solicitacoes` apenas marca o pedido como aprovado para controle interno.
 
 Depois de criar o usuário manualmente no Supabase Auth, também é necessário criar o perfil correspondente na tabela `profiles` com role `admin` ou `gestor`.
+
+O ADMIN pode criar e editar perfis em `/admin/usuarios`, informando o User UID do usuário já existente no Supabase Auth. A tela permite ajustar nome, e-mail, papel e status, mas não cria usuários Auth automaticamente.
+
+Fluxo atual para criar um GESTOR:
+
+1. Criar o usuário em Supabase Auth.
+2. Copiar o User UID.
+3. Abrir `/admin/usuarios`.
+4. Criar o profile com role `gestor` e status `active`.
 
 A recuperação de senha começa em `/recuperar-senha` e a redefinição acontece em `/redefinir-senha`.
 
@@ -156,6 +167,14 @@ insert into public.profiles (id, name, role, status)
 values ('<auth-user-id>', '<Nome do Gestor>', 'gestor', 'active');
 ```
 
+Para adicionar e-mail opcional aos perfis e facilitar a gestão visual no painel ADMIN, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/006_add_profile_email.sql
+```
+
+Esse script adiciona `email` nullable em `profiles`, cria um índice único parcial para e-mails preenchidos e atualiza os grants de insert/update. Convites automáticos e criação automática de usuários Auth ficam para evolução futura.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
@@ -205,6 +224,7 @@ O AcampGestor já cobre o fluxo principal de gestão de acampamentos, pontuaçã
 - A rota `/admin/tribos` foi mantida por compatibilidade técnica, embora a comunicação visível use "equipes".
 - `camp_id` ainda é nullable para permitir migração gradual de dados antigos.
 - Roles e permissões administrativas foram estruturadas com `profiles`, ADMIN e GESTOR. A criação de usuários no Supabase Auth ainda é manual nesta versão.
+- A tela `/admin/usuarios` gerencia apenas profiles; ela não cria contas no Supabase Auth e não envia convites automáticos.
 
 ## Estrutura do Projeto
 
