@@ -56,6 +56,7 @@ Produção: https://tribes-tournament.vercel.app
 - `/admin`: área administrativa geral e compatibilidade com o fluxo antigo.
 - `/admin/conta`: configurações da conta.
 - `/admin/organizacoes`: gestão de organizações.
+- `/admin/organizacoes/:organizationId/membros`: gestão de membros da organização.
 - `/admin/acampamentos`: gestão e seleção do acampamento ativo.
 - `/admin/solicitacoes`: revisão de solicitações de acesso.
 - `/admin/usuarios`: gestão de perfis de acesso.
@@ -223,6 +224,16 @@ A rota `/admin/organizacoes` permite que ADMIN veja todas as organizações e qu
 
 Em `/admin/acampamentos`, o campo Organização é opcional. Acampamentos antigos sem `organization_id` continuam funcionando, e a migração desses registros deve ser feita manualmente apenas quando houver necessidade.
 
+Para habilitar a gestão de membros de organizações, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/011_manage_organization_members.sql
+```
+
+Esse script adiciona funções e policies para gerenciar membros em `organization_members`, além da RPC `add_organization_member_by_email`. ADMIN pode gerenciar membros de qualquer organização. Membros com role `owner` podem adicionar e atualizar membros da própria organização. Membros com role `manager` participam da organização e podem visualizar os membros, mas não gerenciam permissões.
+
+A rota `/admin/organizacoes/:organizationId/membros` permite adicionar membros por e-mail de profile existente, alterar role entre `owner` e `manager` e alterar status entre `active` e `suspended`. O usuário precisa já existir em `profiles`; esta versão não cria usuário Auth automaticamente, não cria profile automaticamente, não envia e-mail e não implementa delete de membros.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
@@ -273,6 +284,7 @@ O AcampGestor já cobre o fluxo principal de gestão de acampamentos, organizaç
 - `camp_id` ainda é nullable para permitir migração gradual de dados antigos.
 - `organization_id` em `camps` ainda é nullable para permitir adoção gradual de organizações.
 - Roles e permissões administrativas foram estruturadas com `profiles`, ADMIN e GESTOR. A criação de usuários no Supabase Auth ainda é manual nesta versão.
+- Membros de organizações usam roles `owner` e `manager`. O delete de membros fica para evolução futura.
 - A tela `/admin/usuarios` gerencia apenas profiles; ela não cria contas no Supabase Auth e não envia convites automáticos.
 - A tela `/admin/convites` organiza convites administrativos, gera links públicos de aceite e auxilia o envio manual, mas não automatiza criação de usuários Auth nem envio real de e-mails.
 - A rota `/convite/:token` aceita convites apenas para usuários autenticados com o e-mail convidado.
