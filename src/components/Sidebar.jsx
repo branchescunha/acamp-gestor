@@ -30,6 +30,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
     ? window.localStorage.getItem(getCampSlugStorageKey(activeCampId))
     : ''
   const campAdminBasePath = activeCampSlug ? `/${activeCampSlug}/admin` : ''
+  const dashboardPath = isAdmin ? '/admin' : campAdminBasePath || '/admin'
   const rankingPath = activeCampSlug ? `/${activeCampSlug}` : '/ranking'
   const roleLabel = isAdmin
     ? 'Administrador geral'
@@ -39,7 +40,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
   const links = [
     {
       label: 'Dashboard',
-      path: campAdminBasePath || '/admin',
+      path: dashboardPath,
       icon: LayoutDashboard,
     },
     { label: 'Conta', path: '/admin/conta', icon: UserRound },

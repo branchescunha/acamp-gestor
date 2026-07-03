@@ -12,6 +12,7 @@ import AcceptInvitation from './pages/AcceptInvitation'
 import Admin from './pages/Admin'
 import Account from './pages/Account'
 import AccessRequests from './pages/AccessRequests'
+import AdminDashboard from './pages/AdminDashboard'
 import Camps from './pages/Camps'
 import Organizations from './pages/Organizations'
 import OrganizationMembers from './pages/OrganizationMembers'
@@ -57,7 +58,7 @@ export default function App() {
             index
             element={
               <AdminOnlyRoute redirectGestorTo="/admin/acampamentos">
-                <Dashboard />
+                <AdminDashboard />
               </AdminOnlyRoute>
             }
           />
