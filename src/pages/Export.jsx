@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
-import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import { calculateRanking } from '../domain/ranking'
 import { summarizeScores } from '../domain/scoring'
@@ -10,11 +10,101 @@ import { supabase } from '../lib/supabase'
 
 export default function Export() {
   const [loading, setLoading] = useState(false)
+  const [loadingScope, setLoadingScope] = useState(true)
+  const [scopeError, setScopeError] = useState('')
+  const [camps, setCamps] = useState([])
+  const [slugCamp, setSlugCamp] = useState(null)
+  const [selectedCampId, setSelectedCampId] = useState('')
+  const { campSlug = '' } = useParams()
   const { activeCampId } = useActiveCamp()
+  const isSlugExport = Boolean(campSlug)
+
+  const selectedCamp = useMemo(() => {
+    if (isSlugExport) return slugCamp
+    return camps.find((camp) => camp.id === selectedCampId) || null
+  }, [camps, isSlugExport, selectedCampId, slugCamp])
+
+  useEffect(() => {
+    let shouldIgnore = false
+
+    async function loadExportScope() {
+      setLoadingScope(true)
+      setScopeError('')
+
+      if (isSlugExport) {
+        const { data, error } = await supabase
+          .from('camps')
+          .select('id, name, church_name, theme, status, slug, start_date, end_date')
+          .eq('slug', campSlug)
+          .maybeSingle()
+
+        if (shouldIgnore) return
+
+        if (error || !data) {
+          if (error) console.error(error)
+          setSlugCamp(null)
+          setSelectedCampId('')
+          setScopeError('Não foi possível carregar o acampamento desta URL.')
+          setLoadingScope(false)
+          return
+        }
+
+        setSlugCamp(data)
+        setSelectedCampId(data.id)
+        setLoadingScope(false)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('camps')
+        .select('id, name, church_name, theme, status, slug, start_date, end_date')
+        .order('name', { ascending: true })
+
+      if (shouldIgnore) return
+
+      if (error) {
+        console.error(error)
+        setCamps([])
+        setSelectedCampId('')
+        setScopeError('Não foi possível carregar os acampamentos disponíveis.')
+        setLoadingScope(false)
+        return
+      }
+
+      const availableCamps = data || []
+      setCamps(availableCamps)
+
+      if (activeCampId && availableCamps.some((camp) => camp.id === activeCampId)) {
+        setSelectedCampId(activeCampId)
+      } else {
+        setSelectedCampId('')
+      }
+
+      setLoadingScope(false)
+    }
+
+    void loadExportScope()
+
+    return () => {
+      shouldIgnore = true
+    }
+  }, [activeCampId, campSlug, isSlugExport])
 
   function formatDate(date) {
     if (!date) return ''
     return new Date(date).toLocaleString('pt-BR')
+  }
+
+  function formatCampDate(date) {
+    if (!date) return '-'
+    return new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR')
+  }
+
+  function getExportFileName(camp) {
+    const campSlugOrId = camp?.slug || camp?.id || 'acampamento'
+    return `acampgestor-backup-${campSlugOrId}-${new Date()
+      .toISOString()
+      .slice(0, 10)}.xlsx`
   }
 
   function getTeamName(team, settings, tribes = []) {
@@ -89,18 +179,19 @@ export default function Export() {
   }
 
   async function handleExport() {
-    if (!activeCampId) {
-      alert('Selecione um acampamento antes de exportar os dados.')
+    if (!selectedCamp?.id) {
+      alert('Selecione um acampamento para exportar.')
       return
     }
 
     setLoading(true)
 
     try {
+      const exportCampId = selectedCamp.id
       const { data: tribesData, error: tribesError } = await supabase
         .from('tribes')
         .select('*')
-        .eq('camp_id', activeCampId)
+        .eq('camp_id', exportCampId)
         .order('name')
 
       const { data: participantsData, error: participantsError } =
@@ -116,7 +207,7 @@ export default function Export() {
           )
         `
           )
-          .eq('camp_id', activeCampId)
+          .eq('camp_id', exportCampId)
           .order('full_name')
 
       const { data: eventsData, error: eventsError } = await supabase
@@ -134,13 +225,13 @@ export default function Export() {
           )
         `
         )
-        .eq('camp_id', activeCampId)
+        .eq('camp_id', exportCampId)
         .order('created_at', { ascending: false })
 
       const { data: gymkhanaData, error: gymkhanaError } = await supabase
         .from('gymkhana_events')
         .select('*')
-        .eq('camp_id', activeCampId)
+        .eq('camp_id', exportCampId)
         .order('created_at', { ascending: false })
 
       const { data: inspectionsData, error: inspectionsError } = await supabase
@@ -157,13 +248,13 @@ export default function Export() {
           )
         `
         )
-        .eq('camp_id', activeCampId)
+        .eq('camp_id', exportCampId)
         .order('created_at', { ascending: false })
 
       const { data: settingsRows, error: settingsError } = await supabase
         .from('gymkhana_settings')
         .select('*')
-        .eq('camp_id', activeCampId)
+        .eq('camp_id', exportCampId)
         .limit(1)
 
       if (
@@ -238,6 +329,22 @@ export default function Export() {
           { header: 'Valor', key: 'value' },
         ],
         [
+          { metric: 'Acampamento', value: selectedCamp.name || '-' },
+          {
+            metric: 'Igreja/organização',
+            value: selectedCamp.church_name || '-',
+          },
+          { metric: 'Tema', value: selectedCamp.theme || '-' },
+          { metric: 'Status do acampamento', value: selectedCamp.status || '-' },
+          { metric: 'Slug público', value: selectedCamp.slug || '-' },
+          {
+            metric: 'Data de início',
+            value: formatCampDate(selectedCamp.start_date),
+          },
+          {
+            metric: 'Data de fim',
+            value: formatCampDate(selectedCamp.end_date),
+          },
           { metric: 'Data da exportação', value: formatDate(new Date()) },
           { metric: 'Equipes cadastradas', value: tribes.length },
           { metric: 'Equipes ativas', value: activeRanking.length },
@@ -616,9 +723,7 @@ export default function Export() {
 
       saveAs(
         new Blob([buffer]),
-        `acampgestor-backup-completo-${new Date()
-          .toISOString()
-          .slice(0, 10)}.xlsx`
+        getExportFileName(selectedCamp)
       )
     } catch (error) {
       console.error(error)
@@ -632,13 +737,72 @@ export default function Export() {
     <section>
       <PageHeader
         eyebrow="Exportação"
-        title="Backup operacional completo"
-        description="Exporte os dados do evento em uma planilha completa e organizada."
+        title="Exportação por acampamento"
+        description="Exporte os dados operacionais de um acampamento específico em uma planilha organizada."
       />
 
-      {!activeCampId && (
-        <div className="mb-6">
-          <ActiveCampNotice message="Selecione um acampamento para exportar os dados operacionais." />
+      {scopeError && (
+        <p
+          role="alert"
+          className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200"
+        >
+          {scopeError}
+        </p>
+      )}
+
+      {isSlugExport ? (
+        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-yellow-500">
+            Escopo da exportação
+          </p>
+
+          <h2 className="mt-3 text-xl font-bold">
+            {selectedCamp
+              ? `Exportação do acampamento: ${selectedCamp.name}`
+              : 'Carregando acampamento...'}
+          </h2>
+
+          <p className="mt-2 text-sm text-zinc-400">
+            A exportação por slug usa somente os dados do acampamento acessado
+            pela URL atual.
+          </p>
+        </div>
+      ) : (
+        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-yellow-500">
+            Escopo da exportação
+          </p>
+
+          <h2 className="mt-3 text-xl font-bold">
+            {selectedCamp
+              ? `Acampamento selecionado para exportação: ${selectedCamp.name}`
+              : 'Selecione um acampamento para exportar.'}
+          </h2>
+
+          <p className="mt-2 text-sm text-zinc-400">
+            A exportação inclui ranking, equipes, participantes, pontuações,
+            histórico, gincana e inspeções apenas do acampamento escolhido.
+          </p>
+
+          <select
+            value={selectedCampId}
+            onChange={(event) => setSelectedCampId(event.target.value)}
+            disabled={loadingScope}
+            className="mt-5 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+          >
+            <option value="">Escolher acampamento</option>
+            {camps.map((camp) => (
+              <option key={camp.id} value={camp.id}>
+                {camp.name}
+              </option>
+            ))}
+          </select>
+
+          {!loadingScope && camps.length === 0 && (
+            <p className="mt-3 text-sm text-zinc-500">
+              Nenhum acampamento disponível para exportação.
+            </p>
+          )}
         </div>
       )}
 
@@ -646,7 +810,7 @@ export default function Export() {
         <h2 className="text-xl font-bold">Relatório completo em Excel</h2>
 
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-400">
-          O arquivo inclui resumo geral, ranking, equipes, participantes,
+          O arquivo inclui dados do acampamento, resumo geral, ranking, equipes, participantes,
           histórico completo, pontos positivos, penalidades, gincana, inspeções
           de quartos, estatísticas por equipe e estatísticas das equipes da
           gincana.
@@ -655,10 +819,14 @@ export default function Export() {
         <button
           type="button"
           onClick={handleExport}
-          disabled={loading || !activeCampId}
+          disabled={loading || loadingScope || !selectedCamp?.id}
           className="mt-6 rounded-xl bg-yellow-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? 'Exportando...' : 'Exportar backup completo'}
+          {loading
+            ? 'Exportando...'
+            : isSlugExport
+              ? 'Exportar este acampamento'
+              : 'Exportar acampamento selecionado'}
         </button>
       </div>
     </section>
