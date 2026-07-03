@@ -34,16 +34,26 @@ Ainda não há prints versionados no repositório.
 - Gestão de membros por organização.
 - Gestão de acampamentos.
 - Painel do gestor por slug.
-- Cadastro e edição de equipes/tribos.
-- Cadastro e filtragem de participantes.
+- Cadastro e edição de equipes livres por acampamento.
+- Cadastro e filtragem de participantes vinculados a equipes reais.
 - Lançamento de pontos e penalidades.
 - Histórico de lançamentos.
-- Controle de gincanas.
+- Controle de gincanas com equipes cadastradas no acampamento.
 - Controle de inspeções de quartos.
 - Exportação de dados em Excel.
 - Ranking público por slug do acampamento.
 - Regras de acesso com ADMIN, GESTOR e ACAMPANTE.
 - Separação de dados operacionais por acampamento ativo.
+
+## Modelo Operacional
+
+Equipes são grupos livres de competição dentro de um acampamento. Elas não são obrigatoriamente quartos.
+
+Campos como tipo de quarto, número do quarto e responsável/líder continuam disponíveis como informações extras, mas não bloqueiam a criação da equipe.
+
+Participantes podem ser vinculados a uma equipe real cadastrada no acampamento por meio da relação interna `tribe_id`. A equipe continua opcional para preservar cadastros em andamento.
+
+A gincana usa as equipes reais do acampamento. Novos resultados registram a equipe vencedora cadastrada, geram pontuação na categoria `Gincana` e alimentam o histórico/ranking pelo mesmo fluxo de pontuação das demais telas. Eventos antigos baseados em Equipe A/B são tratados como legado para consulta e exportação.
 
 ## Fluxo de Acesso
 
