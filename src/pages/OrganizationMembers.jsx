@@ -117,6 +117,22 @@ export default function OrganizationMembers() {
     setForm(initialForm)
   }
 
+  function wouldLeaveOrganizationWithoutActiveOwner(member, changes) {
+    const nextRole = changes.role ?? member.role
+    const nextStatus = changes.status ?? member.status
+    const activeOwnerCount = members.filter(
+      (currentMember) =>
+        currentMember.role === 'owner' && currentMember.status === 'active',
+    ).length
+
+    return (
+      member.role === 'owner' &&
+      member.status === 'active' &&
+      activeOwnerCount <= 1 &&
+      (nextRole !== 'owner' || nextStatus !== 'active')
+    )
+  }
+
   function validateForm() {
     if (!form.email.trim()) {
       return 'Informe o e-mail do usuário.'
@@ -167,9 +183,15 @@ export default function OrganizationMembers() {
   }
 
   async function handleUpdateMember(member, changes) {
-    setUpdatingId(member.id)
     setError('')
     setSuccess('')
+
+    if (wouldLeaveOrganizationWithoutActiveOwner(member, changes)) {
+      setError('A organização precisa manter pelo menos um owner ativo.')
+      return
+    }
+
+    setUpdatingId(member.id)
 
     const { data, error: updateError } = await supabase
       .from('organization_members')
@@ -185,7 +207,9 @@ export default function OrganizationMembers() {
 
     if (updateError) {
       console.error(updateError)
-      setError('Não foi possível atualizar o membro.')
+      setError(
+        'Não foi possível alterar este membro. Verifique se a organização continuará com pelo menos um owner ativo.',
+      )
       setUpdatingId(null)
       return
     }
@@ -371,8 +395,8 @@ export default function OrganizationMembers() {
 
       {!canManageMembers && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 text-sm text-zinc-400">
-          Você pode visualizar os membros desta organização, mas não pode
-          adicionar ou alterar membros.
+          Managers podem visualizar membros, mas apenas owners ou
+          administradores podem gerenciá-los.
         </div>
       )}
 

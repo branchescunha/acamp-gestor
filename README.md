@@ -234,6 +234,14 @@ Esse script adiciona funções e policies para gerenciar membros em `organizatio
 
 A rota `/admin/organizacoes/:organizationId/membros` permite adicionar membros por e-mail de profile existente, alterar role entre `owner` e `manager` e alterar status entre `active` e `suspended`. O usuário precisa já existir em `profiles`; esta versão não cria usuário Auth automaticamente, não cria profile automaticamente, não envia e-mail e não implementa delete de membros.
 
+Para reforçar a segurança de organizações e membros, execute manualmente no Supabase SQL Editor o arquivo:
+
+```text
+supabase/sql/012_organization_security_hardening.sql
+```
+
+Esse script impede que uma organização fique sem pelo menos um `owner` ativo, reforça a policy de atualização de `organization_members` e mantém `manager` apenas com permissão de visualização. ADMIN continua podendo gerenciar organizações e membros, mas também respeita a regra de manter um `owner` ativo. O SQL não cria delete, não cria usuários automaticamente e não altera os scripts anteriores.
+
 ## Variáveis de Ambiente
 
 O projeto depende de variáveis de ambiente para conexão com o Supabase.
