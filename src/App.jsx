@@ -4,6 +4,7 @@ import Ranking from './pages/Ranking'
 import PublicCampRanking from './pages/PublicCampRanking'
 import CampAdminRoute from './components/CampAdminRoute'
 import AdminOnlyRoute from './components/AdminOnlyRoute'
+import RequireActiveCamp from './components/RequireActiveCamp'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
@@ -98,13 +99,62 @@ export default function App() {
             path="account"
             element={<Navigate to="/admin/conta" replace />}
           />
-          <Route path="tribos" element={<Tribes />} />
-          <Route path="participantes" element={<Participants />} />
-          <Route path="pontuacao" element={<Scores />} />
-          <Route path="historico" element={<History />} />
-          <Route path="exportacao" element={<Export />} />
-          <Route path="gincana" element={<Gymkhana />} />
-          <Route path="inspecoes" element={<Inspections />} />
+          <Route
+            path="tribos"
+            element={
+              <RequireActiveCamp>
+                <Tribes />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
+            path="participantes"
+            element={
+              <RequireActiveCamp>
+                <Participants />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
+            path="pontuacao"
+            element={
+              <RequireActiveCamp>
+                <Scores />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
+            path="historico"
+            element={
+              <RequireActiveCamp>
+                <History />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
+            path="exportacao"
+            element={
+              <RequireActiveCamp>
+                <Export />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
+            path="gincana"
+            element={
+              <RequireActiveCamp>
+                <Gymkhana />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
+            path="inspecoes"
+            element={
+              <RequireActiveCamp>
+                <Inspections />
+              </RequireActiveCamp>
+            }
+          />
         </Route>
 
         <Route path="/:campSlug/admin" element={<CampAdminRoute />}>

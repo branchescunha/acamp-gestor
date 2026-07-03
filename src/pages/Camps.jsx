@@ -43,7 +43,8 @@ export default function Camps() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [slugTouched, setSlugTouched] = useState(false)
-  const { activeCampId, setActiveCamp } = useActiveCamp(camps)
+  const { activeCampId, clearActiveCamp, setActiveCamp } = useActiveCamp(camps)
+  const selectedCamp = camps.find((camp) => camp.id === activeCampId) || null
 
   function getPublicRankingUrl(slug) {
     if (!slug || typeof window === 'undefined') return ''
@@ -167,6 +168,12 @@ export default function Camps() {
     setError('')
     setSuccess('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function handleClearActiveCamp() {
+    clearActiveCamp()
+    setSuccess('Acampamento ativo removido.')
+    setError('')
   }
 
   async function handleCopyLink(slug) {
@@ -379,10 +386,14 @@ export default function Camps() {
         <div className="flex flex-col gap-2 sm:flex-row md:justify-start">
           <button
             type="button"
-            onClick={() => setActiveCamp(camp)}
+            onClick={() =>
+              activeCampId === camp.id
+                ? handleClearActiveCamp()
+                : setActiveCamp(camp)
+            }
             className="rounded-lg border border-yellow-500/40 px-3 py-2 text-xs font-semibold text-yellow-300 transition hover:bg-yellow-500/10"
           >
-            Selecionar
+            {activeCampId === camp.id ? 'Remover selecao' : 'Selecionar'}
           </button>
 
           <button
@@ -421,6 +432,31 @@ export default function Camps() {
         >
           {success}
         </p>
+      )}
+
+      {selectedCamp && (
+        <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-yellow-300">
+                Acampamento ativo
+              </p>
+              <h2 className="mt-2 text-xl font-bold">{selectedCamp.name}</h2>
+              <p className="mt-1 text-sm text-yellow-100/80">
+                As telas operacionais antigas em /admin usam este acampamento
+                como contexto.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleClearActiveCamp}
+              className="rounded-xl border border-yellow-500/40 px-4 py-3 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500/10"
+            >
+              Remover selecao
+            </button>
+          </div>
+        </div>
       )}
 
       <form
