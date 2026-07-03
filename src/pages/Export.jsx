@@ -17,7 +17,10 @@ export default function Export() {
     return new Date(date).toLocaleString('pt-BR')
   }
 
-  function getTeamName(team, settings) {
+  function getTeamName(team, settings, tribes = []) {
+    const tribe = tribes.find((item) => item.id === team)
+
+    if (tribe) return tribe.name
     if (team === 'A') return settings.team_a_name || 'Equipe A'
     if (team === 'B') return settings.team_b_name || 'Equipe B'
     return 'Sem equipe'
@@ -270,14 +273,6 @@ export default function Export() {
             metric: 'Inspeções realizadas',
             value: inspections.length,
           },
-          {
-            metric: `Integrantes ${settings.team_a_name}`,
-            value: teamAParticipants.length,
-          },
-          {
-            metric: `Integrantes ${settings.team_b_name}`,
-            value: teamBParticipants.length,
-          },
         ]
       )
 
@@ -363,7 +358,7 @@ export default function Export() {
           { header: 'Tamanho da camiseta', key: 'shirt_size' },
           { header: 'Sexo', key: 'gender' },
           { header: 'Grupo', key: 'group_type' },
-          { header: 'Equipe da gincana', key: 'gymkhana_team' },
+          { header: 'Equipe da gincana legada', key: 'gymkhana_team' },
           { header: 'Telefone', key: 'phone' },
           { header: 'Telefone responsável', key: 'guardian_phone' },
           { header: 'ID da equipe', key: 'tribe_id' },
@@ -387,7 +382,11 @@ export default function Export() {
           shirt_size: participant.shirt_size || '',
           gender: participant.gender || '',
           group_type: participant.group_type || '',
-          gymkhana_team: getTeamName(participant.gymkhana_team, settings),
+          gymkhana_team: getTeamName(
+            participant.gymkhana_team,
+            settings,
+            tribes
+          ),
           phone: participant.phone || '',
           guardian_phone: participant.guardian_phone || '',
           tribe_id: participant.tribe_id || '',
@@ -490,28 +489,39 @@ export default function Export() {
           { header: 'Data', key: 'created_at' },
           { header: 'Prova', key: 'title' },
           { header: 'Equipe vencedora', key: 'winning_team' },
-          { header: 'Pontos por integrante', key: 'points_per_member' },
-          { header: 'Integrantes beneficiados', key: 'members_count' },
+          { header: 'Pontos', key: 'points_per_member' },
+          { header: 'Participantes ativos da equipe', key: 'members_count' },
           { header: 'Total distribuído', key: 'total_distributed' },
           { header: 'Observações', key: 'notes' },
         ],
         gymkhanaEvents.map((eventItem) => {
-          const membersCount =
+          const legacyMembersCount =
             eventItem.winning_team === 'A'
               ? teamAParticipants.filter((participant) => participant.is_active)
                   .length
               : teamBParticipants.filter((participant) => participant.is_active)
                   .length
+          const realTeamMembersCount = participants.filter(
+            (participant) =>
+              participant.is_active &&
+              participant.tribe_id === eventItem.winning_team
+          ).length
+          const membersCount =
+            eventItem.winning_team === 'A' || eventItem.winning_team === 'B'
+              ? legacyMembersCount
+              : realTeamMembersCount
 
           return {
             id: eventItem.id,
             created_at: formatDate(eventItem.created_at),
             title: eventItem.title,
-            winning_team: getTeamName(eventItem.winning_team, settings),
+            winning_team: getTeamName(eventItem.winning_team, settings, tribes),
             points_per_member: eventItem.points_per_member,
             members_count: membersCount,
             total_distributed:
-              membersCount * Number(eventItem.points_per_member || 0),
+              eventItem.winning_team === 'A' || eventItem.winning_team === 'B'
+                ? membersCount * Number(eventItem.points_per_member || 0)
+                : Number(eventItem.points_per_member || 0),
             notes: eventItem.notes || '',
           }
         })
@@ -584,34 +594,22 @@ export default function Export() {
           { header: 'Equipe', key: 'team' },
           { header: 'Integrantes', key: 'members' },
           { header: 'Participantes ativos', key: 'active_members' },
-          { header: 'Equipes representadas', key: 'represented_tribes' },
+          { header: 'ID da equipe', key: 'team_id' },
         ],
-        [
-          {
-            team: settings.team_a_name,
-            members: teamAParticipants.length,
-            active_members: teamAParticipants.filter(
+        tribes.map((tribe) => {
+          const teamMembers = participants.filter(
+            (participant) => participant.tribe_id === tribe.id
+          )
+
+          return {
+            team: tribe.name,
+            members: teamMembers.length,
+            active_members: teamMembers.filter(
               (participant) => participant.is_active
             ).length,
-            represented_tribes: new Set(
-              teamAParticipants
-                .filter((participant) => participant.tribe_id)
-                .map((participant) => participant.tribe_id)
-            ).size,
-          },
-          {
-            team: settings.team_b_name,
-            members: teamBParticipants.length,
-            active_members: teamBParticipants.filter(
-              (participant) => participant.is_active
-            ).length,
-            represented_tribes: new Set(
-              teamBParticipants
-                .filter((participant) => participant.tribe_id)
-                .map((participant) => participant.tribe_id)
-            ).size,
-          },
-        ]
+            team_id: tribe.id,
+          }
+        })
       )
 
       const buffer = await workbook.xlsx.writeBuffer()

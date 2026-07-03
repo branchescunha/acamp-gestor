@@ -319,7 +319,7 @@ export default function Tribes() {
       <PageHeader
         eyebrow="Gestão"
         title="Equipes"
-        description="Gerenciamento das equipes, quartos e responsáveis."
+        description="Gerenciamento das equipes livres de competição do acampamento."
       />
 
       {!activeCampId && (
@@ -382,7 +382,7 @@ export default function Tribes() {
             onChange={handleRoomTypeChange}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Tipo de quarto</option>
+            <option value="">Tipo de quarto, opcional</option>
 
             {roomTypes.map((roomType) => (
               <option key={roomType} value={roomType}>
@@ -395,7 +395,7 @@ export default function Tribes() {
             name="room_name"
             value={form.room_name}
             onChange={handleChange}
-            placeholder="Quarto / número"
+            placeholder="Quarto / número, opcional"
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           />
 
@@ -542,7 +542,7 @@ export default function Tribes() {
           <p className="text-zinc-400">Carregando equipes...</p>
         ) : filteredAndSortedTribes.length === 0 ? (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6 text-center text-zinc-400">
-            Nenhuma equipe encontrada.
+            Nenhuma equipe cadastrada para este acampamento.
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -603,8 +603,8 @@ export default function Tribes() {
                   <h2 className="mt-6 text-2xl font-bold">{tribe.name}</h2>
 
                   <div className="mt-5 space-y-2 text-sm text-zinc-400">
-                    <p>Tipo de quarto: {tribe.room_type || 'Não definido'}</p>
-                    <p>Quarto: {tribe.room_name || 'Não definido'}</p>
+                    <p>Tipo de quarto: {tribe.room_type || 'Opcional'}</p>
+                    <p>Quarto: {tribe.room_name || 'Opcional'}</p>
                     <p>Responsável: {tribe.leader_name || 'Não definido'}</p>
                     <p>Integrantes ativos: {membersCount}</p>
                   </div>

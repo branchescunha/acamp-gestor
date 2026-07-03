@@ -15,7 +15,6 @@ const initialForm = {
   shirt_size: '',
   gender: '',
   group_type: '',
-  gymkhana_team: '',
   phone: '',
   guardian_phone: '',
   food_restriction: '',
@@ -28,7 +27,6 @@ const initialForm = {
 const initialFilters = {
   search: '',
   tribe_id: '',
-  gymkhana_team: '',
   group_type: '',
   gender: '',
   age: '',
@@ -189,7 +187,6 @@ export default function Participants() {
       shirt_size: participant.shirt_size || '',
       gender: participant.gender || '',
       group_type: participant.group_type || '',
-      gymkhana_team: participant.gymkhana_team || '',
       phone: participant.phone || '',
       guardian_phone: participant.guardian_phone || '',
       food_restriction: participant.food_restriction || '',
@@ -266,7 +263,6 @@ export default function Participants() {
       shirt_size: form.shirt_size || null,
       gender: form.gender,
       group_type: form.group_type,
-      gymkhana_team: form.gymkhana_team || null,
       phone: form.phone.trim() || null,
       guardian_phone: form.guardian_phone.trim() || null,
       food_restriction: form.food_restriction.trim() || null,
@@ -332,12 +328,6 @@ export default function Participants() {
         ? participant.shirt_size === filters.shirt_size
         : true
 
-      const matchesGymkhanaTeam = filters.gymkhana_team
-        ? filters.gymkhana_team === 'none'
-          ? !participant.gymkhana_team
-          : participant.gymkhana_team === filters.gymkhana_team
-        : true
-
       const matchesStatus = filters.status
         ? String(participant.is_active) === filters.status
         : true
@@ -349,7 +339,6 @@ export default function Participants() {
       return (
         matchesSearch &&
         matchesTribe &&
-        matchesGymkhanaTeam &&
         matchesGroup &&
         matchesGender &&
         matchesAge &&
@@ -372,24 +361,6 @@ export default function Participants() {
         }`}
       >
         {gender || '-'}
-      </span>
-    )
-  }
-
-  function renderGymkhanaBadge(team) {
-    if (!team) {
-      return <span className="text-zinc-500">Sem equipe</span>
-    }
-
-    return (
-      <span
-        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-          team === 'A'
-            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/20'
-            : 'bg-violet-500/20 text-violet-300 border border-violet-500/20'
-        }`}
-      >
-        Equipe {team}
       </span>
     )
   }
@@ -420,11 +391,6 @@ export default function Participants() {
       render: (participant) => (
         <span className="text-zinc-400">{participant.group_type}</span>
       ),
-    },
-    {
-      key: 'gymkhana',
-      label: 'Gincana',
-      render: (participant) => renderGymkhanaBadge(participant.gymkhana_team),
     },
     {
       key: 'tribe',
@@ -584,17 +550,6 @@ export default function Participants() {
             <option value="UMP">UMP</option>
           </select>
 
-          <select
-            name="gymkhana_team"
-            value={form.gymkhana_team}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
-          >
-            <option value="">Sem equipe da gincana</option>
-            <option value="A">Equipe A</option>
-            <option value="B">Equipe B</option>
-          </select>
-
           <input
             name="phone"
             value={form.phone}
@@ -625,6 +580,12 @@ export default function Participants() {
               </option>
             ))}
           </select>
+
+          {tribes.length === 0 && (
+            <p className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100 md:col-span-2 xl:col-span-4">
+              Cadastre equipes antes de vincular participantes à competição.
+            </p>
+          )}
 
           <input
             name="food_restriction"
@@ -756,18 +717,6 @@ export default function Participants() {
                 {tribe.name}
               </option>
             ))}
-          </select>
-
-          <select
-            name="gymkhana_team"
-            value={filters.gymkhana_team}
-            onChange={handleFilterChange}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
-          >
-            <option value="">Todas as equipes</option>
-            <option value="A">Equipe A</option>
-            <option value="B">Equipe B</option>
-            <option value="none">Sem equipe</option>
           </select>
 
           <select
