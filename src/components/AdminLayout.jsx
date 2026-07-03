@@ -10,6 +10,16 @@ import {
 } from '../hooks/useActiveCamp'
 import { useUserProfile } from '../hooks/useUserProfile'
 
+const adminOperationPaths = [
+  '/admin/tribos',
+  '/admin/participantes',
+  '/admin/pontuacao',
+  '/admin/historico',
+  '/admin/exportacao',
+  '/admin/gincana',
+  '/admin/inspecoes',
+]
+
 export default function AdminLayout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const location = useLocation()
@@ -30,8 +40,13 @@ export default function AdminLayout({ children }) {
     ? window.localStorage.getItem(getCampSlugStorageKey(activeCampId))
     : ''
   const isCampAdminRoute = Boolean(campSlug)
+  const isAdminOperationRoute = adminOperationPaths.includes(location.pathname)
   const shouldShowActiveCampBar =
-    isCampAdminRoute || location.pathname !== '/admin'
+    isCampAdminRoute || isAdminOperationRoute
+  const mobileTitle =
+    isCampAdminRoute || isAdminOperationRoute
+      ? 'Painel do acampamento'
+      : 'Painel da plataforma'
   const roleLabel = isAdmin
     ? 'Administrador geral'
     : isGestor
@@ -95,9 +110,7 @@ export default function AdminLayout({ children }) {
               </p>
 
               <h1 className="mt-2 text-xl font-bold">
-                {isCampAdminRoute
-                  ? 'Painel do acampamento'
-                  : 'Área administrativa'}
+                {mobileTitle}
               </h1>
             </div>
 
@@ -125,7 +138,7 @@ export default function AdminLayout({ children }) {
                   </span>
                 </span>
 
-                {!isCampAdminRoute && activeCampSlug && (
+                {isAdminOperationRoute && activeCampSlug && (
                   <Link
                     to={`/${activeCampSlug}/admin`}
                     className="font-semibold text-yellow-400 hover:text-yellow-300"

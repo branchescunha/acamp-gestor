@@ -103,6 +103,18 @@ A tela pública de solicitação de acesso não aponta para um ranking genérico
 - `/admin/acampamentos`: gestão e seleção de acampamentos.
 - `/admin/conta`: configurações da conta.
 
+As rotas operacionais antigas em `/admin` dependem de um acampamento ativo selecionado em `/admin/acampamentos`:
+
+- `/admin/tribos`
+- `/admin/participantes`
+- `/admin/pontuacao`
+- `/admin/historico`
+- `/admin/gincana`
+- `/admin/inspecoes`
+- `/admin/exportacao`
+
+Sem acampamento ativo, essas telas orientam o ADMIN a selecionar um acampamento antes de gerenciar dados operacionais.
+
 ### Painel do Gestor
 
 - `/:campSlug/admin`: dashboard do acampamento.
@@ -113,6 +125,8 @@ A tela pública de solicitação de acesso não aponta para um ranking genérico
 - `/:campSlug/admin/gincana`: controle de gincanas.
 - `/:campSlug/admin/inspecoes`: controle de inspeções.
 - `/:campSlug/admin/exportacao`: exportação de dados.
+
+O painel por slug usa o acampamento da própria URL e não depende da seleção local de acampamento ativo. O botão "Ver ranking do evento" abre o ranking público do acampamento atual quando há slug e ranking público habilitado; sem acampamento ativo, o ADMIN vê os rankings públicos disponíveis.
 
 ## Segurança e Permissões
 

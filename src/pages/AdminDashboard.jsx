@@ -196,7 +196,7 @@ export default function AdminDashboard() {
       <section>
         <PageHeader
           eyebrow="AcampGestor"
-          title="Dashboard"
+          title="Painel da plataforma"
           description="Visão geral da plataforma AcampGestor"
         />
         <p className="text-zinc-400">Carregando dashboard administrativo...</p>
@@ -208,7 +208,7 @@ export default function AdminDashboard() {
     <section>
       <PageHeader
         eyebrow="AcampGestor"
-        title="Dashboard"
+        title="Painel da plataforma"
         description="Visão geral da plataforma AcampGestor"
       />
 
