@@ -53,7 +53,7 @@ Produção: https://tribes-tournament.vercel.app
 - `/convite/:token`: aceite público de convite administrativo.
 - `/recuperar-senha`: solicitação de recuperação de senha.
 - `/redefinir-senha`: criação de nova senha via Supabase Auth.
-- `/admin`: área administrativa geral e compatibilidade com o fluxo antigo.
+- `/admin`: dashboard geral da plataforma, exclusivo para ADMIN.
 - `/admin/conta`: configurações da conta.
 - `/admin/organizacoes`: gestão de organizações.
 - `/admin/organizacoes/:organizationId/membros`: gestão de membros da organização.
@@ -79,7 +79,7 @@ O AcampGestor trabalha com três tipos de acesso:
 
 - ACAMPANTE: não possui login e acessa apenas o ranking público do acampamento em `/:campSlug`.
 - GESTOR: possui login e gerencia apenas os próprios acampamentos pelo painel `/:campSlug/admin`.
-- ADMIN: possui login, acessa `/admin`, revisa solicitações, vê todos os acampamentos e pode gerenciar qualquer acampamento.
+- ADMIN: possui login, acessa o dashboard geral em `/admin`, revisa solicitações, vê todos os acampamentos e pode gerenciar qualquer acampamento.
 
 O cadastro aberto ainda não existe neste MVP. A rota `/solicitar-acesso` salva pedidos de acesso na tabela `access_requests`, mas não cria usuário automaticamente.
 
@@ -90,6 +90,8 @@ Depois de criar o usuário manualmente no Supabase Auth, também é necessário 
 O ADMIN pode criar e editar perfis em `/admin/usuarios`, informando o User UID do usuário já existente no Supabase Auth. A tela permite ajustar nome, e-mail, papel e status, mas não cria usuários Auth automaticamente.
 
 O ADMIN também pode organizar convites administrativos em `/admin/convites`. Convites registram nome, e-mail, papel, status, observações e controle de envio assistido, mas não criam usuário Auth, não criam profile automaticamente e não enviam e-mail real automaticamente.
+
+O dashboard geral em `/admin` é exclusivo para ADMIN e apresenta métricas da plataforma, atalhos administrativos e visão recente de organizações, acampamentos e solicitações de acesso. GESTOR continua usando os fluxos permitidos, principalmente `/admin/acampamentos` e o painel do acampamento por slug.
 
 Convites podem ser aceitos pela rota pública `/convite/:token`. O usuário Auth ainda precisa existir antes. Ao aceitar o convite autenticado com o e-mail correto, o sistema cria ou atualiza o profile do usuário logado e marca o convite como aceito.
 
@@ -156,7 +158,7 @@ A leitura pública do ranking usa somente colunas mínimas de `camps` e views p�
 
 O ranking público por slug usa a rota `/:campSlug`, por exemplo `/retiro-de-jovens-2026`, e não depende do acampamento ativo salvo no navegador.
 
-O painel do gestor por slug usa a rota `/:campSlug/admin`. Ao acessar essa rota autenticado, o sistema resolve o acampamento pelo slug, define esse acampamento como ativo e reutiliza as telas administrativas existentes. A rota `/admin` continua disponível para compatibilidade e usa o acampamento ativo selecionado.
+O painel do gestor por slug usa a rota `/:campSlug/admin`. Ao acessar essa rota autenticado, o sistema resolve o acampamento pelo slug, define esse acampamento como ativo e reutiliza as telas administrativas existentes. A rota `/admin` exibe o dashboard geral da plataforma para ADMIN.
 
 Para habilitar perfis e permissões reais de ADMIN e GESTOR, execute manualmente no Supabase SQL Editor o arquivo:
 

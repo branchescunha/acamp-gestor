@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import RoleAccessNotice from './RoleAccessNotice'
 import Sidebar from './Sidebar'
@@ -12,6 +12,7 @@ import { useUserProfile } from '../hooks/useUserProfile'
 
 export default function AdminLayout({ children }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const location = useLocation()
   const { campSlug } = useParams()
   const {
     profile,
@@ -29,6 +30,8 @@ export default function AdminLayout({ children }) {
     ? window.localStorage.getItem(getCampSlugStorageKey(activeCampId))
     : ''
   const isCampAdminRoute = Boolean(campSlug)
+  const shouldShowActiveCampBar =
+    isCampAdminRoute || location.pathname !== '/admin'
   const roleLabel = isAdmin
     ? 'Administrador geral'
     : isGestor
@@ -108,6 +111,7 @@ export default function AdminLayout({ children }) {
             </button>
           </header>
 
+          {shouldShowActiveCampBar && (
           <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900 px-5 py-4 text-sm text-zinc-300">
             {activeCampName ? (
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -142,6 +146,7 @@ export default function AdminLayout({ children }) {
               </span>
             )}
           </div>
+          )}
 
           {children}
         </section>
