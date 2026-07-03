@@ -6,6 +6,7 @@ Produção: https://tribes-tournament.vercel.app
 
 ## Funcionalidades
 
+- Landing page pública para apresentar o AcampGestor.
 - Ranking público das equipes por URL do acampamento.
 - Painel administrativo protegido por autenticação.
 - Perfis administrativos com separação entre ADMIN e GESTOR.
@@ -38,6 +39,7 @@ Produção: https://tribes-tournament.vercel.app
 
 ## Rotas Principais
 
+- `/`: landing page pública com apresentação do AcampGestor, CTA para solicitar acesso e CTA para login.
 - `/:campSlug`: ranking público do acampamento por URL própria.
 - `/:campSlug/admin`: painel do gestor daquele acampamento.
 - `/:campSlug/admin/equipes`: gestão de equipes daquele acampamento.
@@ -92,6 +94,8 @@ O ADMIN pode criar e editar perfis em `/admin/usuarios`, informando o User UID d
 O ADMIN também pode organizar convites administrativos em `/admin/convites`. Convites registram nome, e-mail, papel, status, observações e controle de envio assistido, mas não criam usuário Auth, não criam profile automaticamente e não enviam e-mail real automaticamente.
 
 O dashboard geral em `/admin` é exclusivo para ADMIN e apresenta métricas da plataforma, atalhos administrativos e visão recente de organizações, acampamentos e solicitações de acesso. GESTOR continua usando os fluxos permitidos, principalmente `/admin/acampamentos` e o painel do acampamento por slug.
+
+O fluxo público começa na landing page `/`, onde visitantes podem solicitar acesso em `/solicitar-acesso` ou entrar pelo `/login`. Rankings públicos continuam disponíveis por slug em `/:campSlug`.
 
 Convites podem ser aceitos pela rota pública `/convite/:token`. O usuário Auth ainda precisa existir antes. Ao aceitar o convite autenticado com o e-mail correto, o sistema cria ou atualiza o profile do usuário logado e marca o convite como aceito.
 
