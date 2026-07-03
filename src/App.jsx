@@ -4,6 +4,7 @@ import Ranking from './pages/Ranking'
 import PublicCampRanking from './pages/PublicCampRanking'
 import CampAdminRoute from './components/CampAdminRoute'
 import AdminOnlyRoute from './components/AdminOnlyRoute'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -31,7 +32,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/ranking" />} />
+        <Route path="/" element={<LandingPage />} />
 
         <Route path="/ranking" element={<Ranking />} />
 
