@@ -55,6 +55,10 @@ Participantes podem ser vinculados a uma equipe real cadastrada no acampamento p
 
 A gincana usa as equipes reais do acampamento. Novos resultados registram a equipe vencedora cadastrada, geram pontuação na categoria `Gincana` e alimentam o histórico/ranking pelo mesmo fluxo de pontuação das demais telas. Eventos antigos baseados em Equipe A/B são tratados como legado para consulta e exportação.
 
+A exportação operacional é sempre feita por acampamento. No painel ADMIN, o usuário escolhe um acampamento disponível ou usa o acampamento ativo como seleção inicial. No painel por slug, o GESTOR exporta somente o acampamento acessado pela URL atual. A versão atual não exporta todos os acampamentos nem múltiplos acampamentos ao mesmo tempo.
+
+O arquivo exportado inclui dados do acampamento, ranking, equipes reais, participantes, pontuações, histórico, gincana dinâmica, inspeções e estatísticas por equipe.
+
 ## Fluxo de Acesso
 
 O fluxo principal de entrada de gestores começa em `/solicitar-acesso`.
