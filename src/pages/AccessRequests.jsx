@@ -33,6 +33,7 @@ export default function AccessRequests() {
   const [updatingId, setUpdatingId] = useState(null)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [firstAccessLink, setFirstAccessLink] = useState('')
 
   const loadRequests = useCallback(async () => {
     setLoading(true)
@@ -71,24 +72,49 @@ export default function AccessRequests() {
     return new Date(value).toLocaleString('pt-BR')
   }
 
-  function getInvitationPath(request) {
-    const params = new URLSearchParams({
-      name: request.name || '',
-      email: request.email || '',
-    })
-
-    return `/admin/convites?${params.toString()}`
-  }
-
-  async function reviewRequest(requestId, status) {
+  async function approveRequest(requestId) {
     setUpdatingId(requestId)
     setError('')
     setSuccess('')
+    setFirstAccessLink('')
+
+    const { data, error: approvalError } = await supabase.functions.invoke(
+      'approve-access-request',
+      {
+        body: { requestId },
+      },
+    )
+
+    if (approvalError || !data?.success) {
+      console.error(approvalError || data)
+      setError(
+        data?.detail
+          ? `Não foi possível aprovar automaticamente esta solicitação. ${data.detail}`
+          : 'Não foi possível aprovar automaticamente esta solicitação.',
+      )
+      setUpdatingId(null)
+      return
+    }
+
+    setSuccess(
+      data.message ||
+        'Solicitação aprovada. Usuário, profile e vínculo com organização foram criados automaticamente.',
+    )
+    setFirstAccessLink(data.firstAccessLink || '')
+    await loadRequests()
+    setUpdatingId(null)
+  }
+
+  async function rejectRequest(requestId) {
+    setUpdatingId(requestId)
+    setError('')
+    setSuccess('')
+    setFirstAccessLink('')
 
     const { data, error: updateError } = await supabase
       .from('access_requests')
       .update({
-        status,
+        status: 'rejected',
         reviewed_at: new Date().toISOString(),
         reviewed_by: session?.user?.id,
       })
@@ -108,12 +134,23 @@ export default function AccessRequests() {
         request.id === requestId ? data : request,
       ),
     )
-    setSuccess(
-      status === 'approved'
-        ? 'Solicitação aprovada. Crie um convite administrativo, depois crie o usuário no Supabase Auth e cadastre o perfil em Usuários.'
-        : 'Solicitação recusada.',
-    )
+    setSuccess('Solicitação recusada.')
     setUpdatingId(null)
+  }
+
+  async function copyFirstAccessLink() {
+    if (!firstAccessLink || !navigator.clipboard) {
+      setError('Não foi possível acessar a área de transferência do navegador.')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(firstAccessLink)
+      setSuccess('Link de primeiro acesso copiado.')
+    } catch (copyError) {
+      console.error(copyError)
+      setError('Não foi possível copiar o link automaticamente.')
+    }
   }
 
   const columns = [
@@ -172,28 +209,23 @@ export default function AccessRequests() {
             <button
               type="button"
               disabled={updatingId === request.id}
-              onClick={() => reviewRequest(request.id, 'approved')}
+              onClick={() => approveRequest(request.id)}
               className="rounded-lg border border-green-500/40 px-3 py-2 text-xs font-semibold text-green-400 transition hover:bg-green-500/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Aprovar
+              {updatingId === request.id ? 'Aprovando...' : 'Aprovar'}
             </button>
 
             <button
               type="button"
               disabled={updatingId === request.id}
-              onClick={() => reviewRequest(request.id, 'rejected')}
+              onClick={() => rejectRequest(request.id)}
               className="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Recusar
+              {updatingId === request.id ? 'Atualizando...' : 'Recusar'}
             </button>
           </div>
         ) : request.status === 'approved' ? (
-          <Link
-            to={getInvitationPath(request)}
-            className="text-xs font-semibold text-yellow-400 hover:text-yellow-300"
-          >
-            Criar convite
-          </Link>
+          <span className="text-xs text-emerald-400">Acesso criado</span>
         ) : (
           <span className="text-xs text-zinc-500">Revisada</span>
         ),
@@ -248,26 +280,19 @@ export default function AccessRequests() {
       <PageHeader
         eyebrow="Acessos"
         title="Solicitações"
-        description="Avalie pedidos de acesso administrativo. Aprovar uma solicitação não cria usuário automaticamente."
+        description="Avalie pedidos de acesso administrativo. Aprovar uma solicitação cria o acesso inicial do gestor automaticamente."
       />
 
       <div className="mb-6 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-5 text-sm text-yellow-100">
-        Usuários administrativos ainda devem ser criados manualmente no
-        Supabase Auth após a aprovação. Organize o processo em{' '}
+        Solicitações aprovadas criam automaticamente usuário, profile de gestor
+        e vínculo inicial com a organização.{' '}
         <Link
           to="/admin/convites"
           className="font-semibold text-yellow-300 hover:text-yellow-200"
         >
           Convites
         </Link>{' '}
-        e depois cadastre o perfil em{' '}
-        <Link
-          to="/admin/usuarios"
-          className="font-semibold text-yellow-300 hover:text-yellow-200"
-        >
-          Usuários
-        </Link>
-        .
+        continuam disponíveis como histórico, apoio ou fluxo manual secundário.
       </div>
 
       {error && (
@@ -286,6 +311,33 @@ export default function AccessRequests() {
         >
           {success}
         </p>
+      )}
+
+      {firstAccessLink && (
+        <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm text-emerald-100">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="font-semibold text-emerald-200">
+                Link de primeiro acesso
+              </h2>
+              <p className="mt-2 text-emerald-100/80">
+                Envie este link ao gestor para que ele defina a senha e acesse
+                o sistema.
+              </p>
+              <p className="mt-3 break-all font-mono text-xs text-emerald-100/80">
+                {firstAccessLink}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={copyFirstAccessLink}
+              className="rounded-xl border border-emerald-400/40 px-4 py-3 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/10"
+            >
+              Copiar link
+            </button>
+          </div>
+        </div>
       )}
 
       {loading ? (

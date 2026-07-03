@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import {
   Building2,
   FileUser,
-  MailPlus,
   TentTree,
   UserCog,
 } from 'lucide-react'
@@ -15,7 +14,6 @@ const initialMetrics = {
   camps: 0,
   profiles: 0,
   pendingRequests: 0,
-  pendingInvitations: 0,
   publicCamps: 0,
 }
 
@@ -59,11 +57,6 @@ const metricCards = [
     icon: FileUser,
   },
   {
-    key: 'pendingInvitations',
-    label: 'Convites pendentes',
-    icon: MailPlus,
-  },
-  {
     key: 'publicCamps',
     label: 'Acampamentos públicos',
     icon: TentTree,
@@ -82,12 +75,6 @@ const shortcuts = [
     description: 'Gerenciar profiles de acesso',
     path: '/admin/usuarios',
     icon: UserCog,
-  },
-  {
-    label: 'Convites',
-    description: 'Organizar convites administrativos',
-    path: '/admin/convites',
-    icon: MailPlus,
   },
   {
     label: 'Organizações',
@@ -129,7 +116,6 @@ export default function AdminDashboard() {
       campsCount,
       profilesCount,
       pendingRequestsCount,
-      pendingInvitationsCount,
       publicCampsCount,
       latestOrganizations,
       latestCamps,
@@ -140,10 +126,6 @@ export default function AdminDashboard() {
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
       supabase
         .from('access_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending'),
-      supabase
-        .from('invitations')
         .select('id', { count: 'exact', head: true })
         .eq('status', 'pending'),
       supabase
@@ -172,7 +154,6 @@ export default function AdminDashboard() {
       campsCount,
       profilesCount,
       pendingRequestsCount,
-      pendingInvitationsCount,
       publicCampsCount,
       latestOrganizations,
       latestCamps,
@@ -192,7 +173,6 @@ export default function AdminDashboard() {
       camps: getCount(campsCount),
       profiles: getCount(profilesCount),
       pendingRequests: getCount(pendingRequestsCount),
-      pendingInvitations: getCount(pendingInvitationsCount),
       publicCamps: getCount(publicCampsCount),
     })
     setOrganizations(latestOrganizations.data || [])

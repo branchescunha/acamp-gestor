@@ -23,6 +23,7 @@ Ainda não há prints versionados no repositório.
 
 - Landing page pública do produto.
 - Solicitação controlada de acesso.
+- Aprovação automática de solicitações pelo ADMIN.
 - Autenticação com Supabase Auth.
 - Recuperação e redefinição de senha.
 - Dashboard geral para ADMIN.
@@ -44,6 +45,25 @@ Ainda não há prints versionados no repositório.
 - Regras de acesso com ADMIN, GESTOR e ACAMPANTE.
 - Separação de dados operacionais por acampamento ativo.
 
+## Fluxo de Acesso
+
+O fluxo principal de entrada de gestores começa em `/solicitar-acesso`.
+
+Quando um ADMIN aprova uma solicitação em `/admin/solicitacoes`, a Edge Function `approve-access-request` executa o onboarding inicial no servidor:
+
+- valida se o usuário autenticado é ADMIN ativo;
+- cria ou reutiliza o usuário no Supabase Auth;
+- cria ou atualiza o profile com role `gestor` e status `active`;
+- cria ou reutiliza a organização informada na solicitação;
+- vincula o gestor à organização como `owner`;
+- registra o onboarding em `invitations`, quando compatível com o schema;
+- marca a solicitação como aprovada;
+- retorna um link de primeiro acesso para definição de senha, quando gerado com sucesso.
+
+Convites administrativos continuam disponíveis como histórico, apoio ou fluxo manual secundário, mas não são mais etapa obrigatória para aprovar uma solicitação de acesso.
+
+A tela pública de solicitação de acesso não aponta para um ranking genérico. Rankings públicos são acessados pelo slug real do acampamento, em `/:campSlug`.
+
 ## Tecnologias Utilizadas
 
 - React
@@ -53,6 +73,7 @@ Ainda não há prints versionados no repositório.
 - React Router
 - Supabase
 - Supabase Auth
+- Supabase Edge Functions
 - PostgreSQL
 - Row Level Security
 - Lucide React
@@ -107,6 +128,8 @@ As organizações possuem membros com roles `owner` e `manager`. A camada de seg
 
 O ranking público usa views e consultas restritas para evitar exposição de dados sensíveis dos participantes.
 
+A aprovação automática usa `ACAMPGESTOR_ADMIN_API_KEY` somente dentro da Edge Function. Essa secret deve receber uma chave administrativa server-side do Supabase. Ela não deve ser exposta no frontend, não deve entrar no `.env` do Vite e não deve ser commitada. `SUPABASE_SERVICE_ROLE_KEY` pode existir no runtime da Supabase, mas o projeto usa a secret customizada para evitar conflito com nomes reservados da CLI.
+
 ## Banco de Dados
 
 Os scripts SQL ficam em `supabase/sql` e devem ser aplicados manualmente no Supabase, na ordem numérica.
@@ -139,18 +162,22 @@ src/
   utils/        Utilitários compartilhados
 
 supabase/
+  functions/    Edge Functions do Supabase
   sql/          Scripts SQL versionados
 ```
 
 ## Checklist Final de Produção
 
 - Variáveis do Supabase configuradas na Vercel.
+- Secret `ACAMPGESTOR_ADMIN_API_KEY` configurada no ambiente da Edge Function.
+- Edge Function `approve-access-request` deployada no Supabase.
 - Auth Redirect URLs configuradas no Supabase.
 - SQLs `001` a `012` aplicados no Supabase.
 - Ranking público validado.
 - Painel ADMIN validado.
 - Painel por slug validado.
 - Solicitações de acesso validadas.
+- Aprovação automática de solicitações validada.
 - Convites administrativos validados.
 
 ## Status

@@ -179,17 +179,17 @@ export default function RequestAccess() {
         </button>
 
         <Link
-          to="/login"
+          to="/"
           className="mt-6 block text-center text-sm text-zinc-400 hover:text-yellow-500"
         >
-          Voltar para o login
+          Voltar para o início
         </Link>
 
         <Link
-          to="/ranking"
+          to="/login"
           className="mt-4 block text-center text-sm text-zinc-400 hover:text-yellow-500"
         >
-          Ver ranking público
+          Entrar
         </Link>
       </form>
     </main>

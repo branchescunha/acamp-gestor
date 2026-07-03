@@ -10,25 +10,20 @@ export default function Ranking() {
           </p>
 
           <h1 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
-            Ranking não selecionado
+            Ranking indisponível
           </h1>
 
           <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-zinc-400 md:text-base">
-            Solicite à organização o link público do ranking do acampamento.
-            Cada acampamento possui uma URL própria, como
-            <span className="font-semibold text-zinc-200">
-              {' '}
-              /jornada-da-palavra
-            </span>
-            .
+            Verifique se o link está correto ou solicite à organização o link
+            público do ranking.
           </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
-              to="/login"
+              to="/"
               className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-300 transition hover:bg-zinc-800"
             >
-              Área administrativa
+              Ir para o início
             </Link>
 
             <Link
