@@ -39,7 +39,7 @@ export default function CampAdminRoute() {
 
       const { data, error } = await supabase
         .from('camps')
-        .select('id, name, slug, created_by')
+        .select('id, name, slug, created_by, organization_id')
         .eq('slug', campSlug)
         .maybeSingle()
 
@@ -51,7 +51,24 @@ export default function CampAdminRoute() {
         return
       }
 
-      if (!isAdmin && (!isGestor || data.created_by !== session.user.id)) {
+      let canAccessCamp =
+        isAdmin || (isGestor && data.created_by === session.user.id)
+
+      if (!canAccessCamp && isGestor && data.organization_id) {
+        const { data: membershipData, error: membershipError } = await supabase
+          .from('organization_members')
+          .select('id')
+          .eq('organization_id', data.organization_id)
+          .eq('profile_id', session.user.id)
+          .eq('status', 'active')
+          .maybeSingle()
+
+        if (membershipError) console.error(membershipError)
+
+        canAccessCamp = Boolean(membershipData)
+      }
+
+      if (!canAccessCamp) {
         setCamp(null)
         setNotFound(true)
         setLoadingCamp(false)
