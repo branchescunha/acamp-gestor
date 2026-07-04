@@ -51,8 +51,7 @@ export default function CampAdminRoute() {
         return
       }
 
-      let canAccessCamp =
-        isAdmin || (isGestor && data.created_by === session.user.id)
+      let canAccessCamp = isGestor && data.created_by === session.user.id
 
       if (!canAccessCamp && isGestor && data.organization_id) {
         const { data: membershipData, error: membershipError } = await supabase
@@ -86,7 +85,6 @@ export default function CampAdminRoute() {
   }, [
     campSlug,
     isActive,
-    isAdmin,
     isGestor,
     profile,
     session,
@@ -96,7 +94,7 @@ export default function CampAdminRoute() {
   if (loadingAuth || loadingProfile) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
-        <p className="text-zinc-400">Carregando painel do acampamento...</p>
+        <p className="text-zinc-400">Carregando painel do gestor...</p>
       </main>
     )
   }
@@ -141,10 +139,18 @@ export default function CampAdminRoute() {
     )
   }
 
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />
+  }
+
+  if (!isGestor) {
+    return <Navigate to="/login" replace />
+  }
+
   if (loadingCamp) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
-        <p className="text-zinc-400">Carregando painel do acampamento...</p>
+        <p className="text-zinc-400">Carregando painel do gestor...</p>
       </main>
     )
   }
@@ -167,7 +173,7 @@ export default function CampAdminRoute() {
           </p>
 
           <Link
-            to="/admin/acampamentos"
+            to="/gestor"
             className="mt-6 inline-flex rounded-xl bg-yellow-500 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-yellow-400"
           >
             Ir para meus acampamentos

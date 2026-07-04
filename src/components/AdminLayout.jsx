@@ -5,7 +5,6 @@ import RoleAccessNotice from './RoleAccessNotice'
 import Sidebar from './Sidebar'
 import {
   getCampNameStorageKey,
-  getCampSlugStorageKey,
   useActiveCamp,
 } from '../hooks/useActiveCamp'
 import { useUserProfile } from '../hooks/useUserProfile'
@@ -36,22 +35,25 @@ export default function AdminLayout({ children }) {
   const activeCampName = activeCampId
     ? window.localStorage.getItem(getCampNameStorageKey(activeCampId))
     : ''
-  const activeCampSlug = activeCampId
-    ? window.localStorage.getItem(getCampSlugStorageKey(activeCampId))
-    : ''
   const isCampAdminRoute = Boolean(campSlug)
   const isAdminOperationRoute = adminOperationPaths.includes(location.pathname)
   const shouldShowActiveCampBar =
     isCampAdminRoute || isAdminOperationRoute
   const mobileTitle =
-    isCampAdminRoute || isAdminOperationRoute
-      ? 'Painel do acampamento'
-      : 'Painel da plataforma'
-  const roleLabel = isAdmin
-    ? 'Administrador geral'
-    : isGestor
-      ? 'Gestor'
-      : 'Perfil pendente'
+    isCampAdminRoute
+      ? isGestor
+        ? 'Painel do gestor'
+        : 'Painel do acampamento'
+      : isAdminOperationRoute
+        ? 'Painel do acampamento'
+        : 'Painel da plataforma'
+  const roleLabel = isCampAdminRoute
+    ? 'Acesso gestor'
+    : isAdmin
+      ? 'Administrador geral'
+      : isGestor
+        ? 'Gestor'
+        : 'Perfil pendente'
 
   if (loadingProfile) {
     return (
@@ -130,22 +132,15 @@ export default function AdminLayout({ children }) {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <span>
                   {isCampAdminRoute
-                    ? 'Painel do acampamento: '
+                    ? isGestor
+                      ? 'Painel do gestor: '
+                      : 'Painel do acampamento: '
                     : 'Acampamento ativo: '}
                   <strong className="text-white">{activeCampName}</strong>
                   <span className="ml-2 text-xs text-zinc-500">
                     {roleLabel}
                   </span>
                 </span>
-
-                {isAdminOperationRoute && activeCampSlug && (
-                  <Link
-                    to={`/${activeCampSlug}/admin`}
-                    className="font-semibold text-yellow-400 hover:text-yellow-300"
-                  >
-                    Abrir painel por URL própria
-                  </Link>
-                )}
               </div>
             ) : (
               <span>

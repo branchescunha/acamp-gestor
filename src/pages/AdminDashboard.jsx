@@ -4,6 +4,7 @@ import {
   Building2,
   FileUser,
   TentTree,
+  UserCheck,
   UserCog,
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
@@ -13,6 +14,7 @@ const initialMetrics = {
   organizations: 0,
   camps: 0,
   profiles: 0,
+  activeGestors: 0,
   pendingRequests: 0,
   publicCamps: 0,
 }
@@ -50,6 +52,11 @@ const metricCards = [
     key: 'profiles',
     label: 'Usuários',
     icon: UserCog,
+  },
+  {
+    key: 'activeGestors',
+    label: 'Gestores ativos',
+    icon: UserCheck,
   },
   {
     key: 'pendingRequests',
@@ -115,6 +122,7 @@ export default function AdminDashboard() {
       organizationsCount,
       campsCount,
       profilesCount,
+      activeGestorsCount,
       pendingRequestsCount,
       publicCampsCount,
       latestOrganizations,
@@ -124,6 +132,11 @@ export default function AdminDashboard() {
       supabase.from('organizations').select('id', { count: 'exact', head: true }),
       supabase.from('camps').select('id', { count: 'exact', head: true }),
       supabase.from('profiles').select('id', { count: 'exact', head: true }),
+      supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'gestor')
+        .eq('status', 'active'),
       supabase
         .from('access_requests')
         .select('id', { count: 'exact', head: true })
@@ -153,6 +166,7 @@ export default function AdminDashboard() {
       organizationsCount,
       campsCount,
       profilesCount,
+      activeGestorsCount,
       pendingRequestsCount,
       publicCampsCount,
       latestOrganizations,
@@ -172,6 +186,7 @@ export default function AdminDashboard() {
       organizations: getCount(organizationsCount),
       camps: getCount(campsCount),
       profiles: getCount(profilesCount),
+      activeGestors: getCount(activeGestorsCount),
       pendingRequests: getCount(pendingRequestsCount),
       publicCamps: getCount(publicCampsCount),
     })
@@ -243,7 +258,7 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {shortcuts.map((shortcut) => {
           const Icon = shortcut.icon
 

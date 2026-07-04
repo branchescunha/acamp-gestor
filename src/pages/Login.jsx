@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuthContext } from '../hooks/useAuth'
+import { useUserProfile } from '../hooks/useUserProfile'
 
 function getSafeRedirectPath(value) {
   if (typeof value !== 'string') return '/admin'
@@ -9,14 +10,32 @@ function getSafeRedirectPath(value) {
   return value
 }
 
+function getRoleRedirectPath(path, role) {
+  if (role === 'admin') {
+    return path.startsWith('/admin') ? path : '/admin'
+  }
+
+  if (role === 'gestor') {
+    if (path === '/gestor' || path.startsWith('/gestor/')) return path
+    if (/^\/[^/]+\/gestor(?:\/|$)/.test(path)) return path
+    return '/gestor'
+  }
+
+  return '/admin'
+}
+
 export default function Login() {
   const location = useLocation()
   const { session, loadingAuth } = useAuthContext()
+  const { role, loading: loadingProfile } = useUserProfile()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const redirectPath = getSafeRedirectPath(location.state?.from)
+  const redirectPath = getRoleRedirectPath(
+    getSafeRedirectPath(location.state?.from),
+    role,
+  )
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -47,7 +66,7 @@ export default function Login() {
     setLoading(false)
   }
 
-  if (loadingAuth) {
+  if (loadingAuth || (session && loadingProfile)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-zinc-950 text-white">
         <p className="text-zinc-400">Verificando sessão...</p>
@@ -140,13 +159,6 @@ export default function Login() {
           className="mt-4 block text-center text-sm text-zinc-400 hover:text-yellow-500"
         >
           Ainda não tem conta? Solicitar acesso
-        </Link>
-
-        <Link
-          to="/ranking"
-          className="mt-4 block text-center text-sm text-zinc-400 hover:text-yellow-500"
-        >
-          Ver ranking do evento
         </Link>
       </form>
     </main>
