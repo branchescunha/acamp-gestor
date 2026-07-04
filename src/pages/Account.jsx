@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuthContext } from '../hooks/useAuth'
 
 const MIN_PASSWORD_LENGTH = 8
 
 export default function Account() {
+  const { campSlug } = useParams()
   const { session } = useAuthContext()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -74,7 +76,9 @@ export default function Account() {
         <h1 className="mt-3 text-3xl font-bold">Configurações da conta</h1>
 
         <p className="mt-3 max-w-2xl text-zinc-400">
-          Gerencie o acesso administrativo do acampamento no AcampGestor.
+          {campSlug
+            ? 'Gerencie seu acesso gestor no AcampGestor.'
+            : 'Gerencie o acesso administrativo no AcampGestor.'}
         </p>
       </header>
 

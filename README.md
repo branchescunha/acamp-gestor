@@ -78,6 +78,8 @@ Convites administrativos continuam disponíveis como histórico, apoio ou fluxo 
 
 A tela pública de solicitação de acesso não aponta para um ranking genérico. Rankings públicos são acessados pelo slug real do acampamento, em `/:campSlug`.
 
+ADMIN e GESTOR possuem conta e senha. Painéis administrativos e de gestão exigem login; a única tela operacional pública do acampamento é o ranking público em `/:campSlug`.
+
 ## Tecnologias Utilizadas
 
 - React
@@ -109,6 +111,7 @@ A tela pública de solicitação de acesso não aponta para um ranking genérico
 ### Administração
 
 - `/admin`: dashboard geral da plataforma, exclusivo para ADMIN.
+- `/admin/*`: rotas administrativas exclusivas para ADMIN.
 - `/admin/solicitacoes`: revisão de solicitações de acesso.
 - `/admin/usuarios`: gestão de profiles.
 - `/admin/convites`: gestão de convites administrativos.
@@ -131,16 +134,20 @@ Sem acampamento ativo, essas telas orientam o ADMIN a selecionar um acampamento 
 
 ### Painel do Gestor
 
-- `/:campSlug/admin`: dashboard do acampamento.
-- `/:campSlug/admin/equipes`: gestão de equipes.
-- `/:campSlug/admin/participantes`: gestão de participantes.
-- `/:campSlug/admin/pontuacao`: lançamento de pontuação.
-- `/:campSlug/admin/historico`: histórico de lançamentos.
-- `/:campSlug/admin/gincana`: controle de gincanas.
-- `/:campSlug/admin/inspecoes`: controle de inspeções.
-- `/:campSlug/admin/exportacao`: exportação de dados.
+- `/gestor`: área inicial do GESTOR para escolher um acampamento permitido.
+- `/:campSlug/gestor`: dashboard do acampamento.
+- `/:campSlug/gestor/conta`: configurações da conta do gestor.
+- `/:campSlug/gestor/equipes`: gestão de equipes.
+- `/:campSlug/gestor/participantes`: gestão de participantes.
+- `/:campSlug/gestor/pontuacao`: lançamento de pontuação.
+- `/:campSlug/gestor/historico`: histórico de lançamentos.
+- `/:campSlug/gestor/gincana`: controle de gincanas.
+- `/:campSlug/gestor/inspecoes`: controle de inspeções.
+- `/:campSlug/gestor/exportacao`: exportação de dados.
 
-O painel por slug usa o acampamento da própria URL e não depende da seleção local de acampamento ativo. O botão "Ver ranking do evento" abre o ranking público do acampamento atual quando há slug e ranking público habilitado; sem acampamento ativo, o ADMIN vê os rankings públicos disponíveis.
+As rotas antigas em `/:campSlug/admin` continuam apenas como compatibilidade e redirecionam para `/:campSlug/gestor`.
+
+O painel por slug usa o acampamento da própria URL e não depende da seleção local de acampamento ativo. ADMIN executa operações pela interface `/admin`; GESTOR executa operações pela interface `/gestor` e `/:campSlug/gestor`. ADMIN não entra no painel do GESTOR, e GESTOR não entra no painel ADMIN. Não existe rota pública genérica `/ranking`; rankings públicos usam sempre `/:campSlug`.
 
 ## Segurança e Permissões
 

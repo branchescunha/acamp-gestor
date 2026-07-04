@@ -1,12 +1,19 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from 'react-router-dom'
 
-import Ranking from './pages/Ranking'
 import PublicCampRanking from './pages/PublicCampRanking'
 import CampAdminRoute from './components/CampAdminRoute'
 import AdminOnlyRoute from './components/AdminOnlyRoute'
 import RequireActiveCamp from './components/RequireActiveCamp'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
+import Gestor from './pages/Gestor'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import RequestAccess from './pages/RequestAccess'
@@ -29,13 +36,27 @@ import Export from './pages/Export'
 import Gymkhana from './pages/Gymkhana'
 import Inspections from './pages/Inspections'
 
+function LegacyCampAdminRedirect() {
+  const { campSlug = '' } = useParams()
+  const location = useLocation()
+  const legacyPrefix = `/${campSlug}/admin`
+  const routeSuffix = location.pathname.startsWith(legacyPrefix)
+    ? location.pathname.slice(legacyPrefix.length)
+    : ''
+
+  return (
+    <Navigate
+      to={`/${campSlug}/gestor${routeSuffix}${location.search}${location.hash}`}
+      replace
+    />
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-
-        <Route path="/ranking" element={<Ranking />} />
 
         <Route path="/login" element={<Login />} />
 
@@ -157,8 +178,11 @@ export default function App() {
           />
         </Route>
 
-        <Route path="/:campSlug/admin" element={<CampAdminRoute />}>
+        <Route path="/gestor" element={<Gestor />} />
+
+        <Route path="/:campSlug/gestor" element={<CampAdminRoute />}>
           <Route index element={<Dashboard />} />
+          <Route path="conta" element={<Account />} />
           <Route path="equipes" element={<Tribes />} />
           <Route path="participantes" element={<Participants />} />
           <Route path="pontuacao" element={<Scores />} />
@@ -168,9 +192,11 @@ export default function App() {
           <Route path="exportacao" element={<Export />} />
         </Route>
 
+        <Route path="/:campSlug/admin/*" element={<LegacyCampAdminRedirect />} />
+
         <Route path="/:campSlug" element={<PublicCampRanking />} />
 
-        <Route path="*" element={<Navigate to="/ranking" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   )

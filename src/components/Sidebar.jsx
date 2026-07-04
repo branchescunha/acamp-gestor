@@ -37,6 +37,8 @@ const adminOperationLinks = [
 
 function buildCampOperationLinks(campAdminBasePath) {
   return [
+    { label: 'Dashboard', path: campAdminBasePath, icon: LayoutDashboard },
+    { label: 'Conta', path: `${campAdminBasePath}/conta`, icon: UserRound },
     { label: 'Equipes', path: `${campAdminBasePath}/equipes`, icon: Trophy },
     {
       label: 'Participantes',
@@ -77,22 +79,28 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
       window.localStorage.getItem(getCampSlugStorageKey(activeCampId)) ||
       ''
     : ''
-  const campAdminBasePath = activeCampSlug ? `/${activeCampSlug}/admin` : ''
+  const campAdminBasePath = activeCampSlug ? `/${activeCampSlug}/gestor` : ''
   const dashboardPath = isAdmin ? '/admin' : campAdminBasePath || '/admin'
-  const roleLabel = isAdmin
-    ? 'Administrador geral'
-    : isGestor
-      ? 'Gestor'
-      : 'Perfil pendente'
-  const isCampAdminRoute = !location.pathname.startsWith('/admin')
+  const isPlatformRoute = location.pathname.startsWith('/admin')
+  const isCampAdminRoute = !isPlatformRoute
+  const roleLabel = isCampAdminRoute
+    ? 'Acesso gestor'
+    : isAdmin
+      ? 'Administrador geral'
+      : isGestor
+        ? 'Gestor'
+        : 'Perfil pendente'
   const panelTitle =
     isAdmin && !isCampAdminRoute
       ? 'Painel da plataforma'
-      : 'Painel do acampamento'
-  const operationLinks =
-    campAdminBasePath && (isCampAdminRoute || isGestor)
+      : isGestor
+        ? 'Painel do gestor'
+        : 'Painel do acampamento'
+  const operationLinks = isCampAdminRoute
+    ? campAdminBasePath
       ? buildCampOperationLinks(campAdminBasePath)
-      : adminOperationLinks
+      : []
+    : adminOperationLinks
   const operationDisabled = isCampAdminRoute
     ? !campAdminBasePath
     : !activeCampId && (isAdmin || isGestor)
@@ -227,7 +235,11 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
   function renderLink(link, disabled = false) {
     const Icon = link.icon
     const isActive = location.pathname === link.path
-    const targetPath = disabled ? '/admin/acampamentos' : link.path
+    const targetPath = disabled
+      ? isCampAdminRoute
+        ? link.path
+        : '/admin/acampamentos'
+      : link.path
 
     return (
       <Link
@@ -276,6 +288,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
       </div>
 
       <nav className="mt-6 space-y-6">
+        {isPlatformRoute && (
         <div>
           <p className="mb-2 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600">
             Plataforma
@@ -284,6 +297,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
             {platformLinks.map((link) => renderLink(link))}
           </div>
         </div>
+        )}
 
         <div>
           <p className="mb-2 px-4 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-600">
@@ -301,6 +315,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
             {operationLinks.map((link) => renderLink(link, operationDisabled))}
           </div>
         </div>
+
       </nav>
 
       <div className="mt-8 space-y-3">
@@ -310,7 +325,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
           className="flex w-full items-center gap-3 rounded-xl border border-zinc-800 px-4 py-3 text-left text-sm text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
         >
           <Trophy size={18} />
-          Ver ranking do evento
+          {isCampAdminRoute ? 'Ver ranking público' : 'Ver ranking do evento'}
         </button>
 
         {rankingMessage && (
