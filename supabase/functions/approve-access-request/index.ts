@@ -39,6 +39,33 @@ function getPublicAppUrl() {
   return Deno.env.get('PUBLIC_SITE_URL')?.trim() || ''
 }
 
+function getSupabaseAdminKey() {
+  const secretKeysJson = Deno.env.get('SUPABASE_SECRET_KEYS')?.trim()
+
+  if (secretKeysJson) {
+    try {
+      const secretKeys = JSON.parse(secretKeysJson) as Record<string, unknown>
+      const dedicatedSecretKey = secretKeys['approve-access-request']
+      const defaultSecretKey = secretKeys.default
+
+      if (
+        typeof dedicatedSecretKey === 'string' &&
+        dedicatedSecretKey.trim()
+      ) {
+        return dedicatedSecretKey.trim()
+      }
+
+      if (typeof defaultSecretKey === 'string' && defaultSecretKey.trim()) {
+        return defaultSecretKey.trim()
+      }
+    } catch {
+      return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() || ''
+    }
+  }
+
+  return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim() || ''
+}
+
 async function findAuthUserByEmail(supabaseAdmin: any, email: string) {
   let page = 1
   const perPage = 1000
@@ -216,11 +243,9 @@ Deno.serve(async (request) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
-    const adminApiKey =
-      Deno.env.get('ACAMPGESTOR_ADMIN_API_KEY') ||
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseAdminKey = getSupabaseAdminKey()
 
-    if (!supabaseUrl || !adminApiKey) {
+    if (!supabaseUrl || !supabaseAdminKey) {
       return jsonResponse(
         {
           success: false,
@@ -239,7 +264,7 @@ Deno.serve(async (request) => {
       )
     }
 
-    const supabaseAdmin = createClient(supabaseUrl, adminApiKey, {
+    const supabaseAdmin = createClient(supabaseUrl, supabaseAdminKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
