@@ -16,6 +16,8 @@ export default function Dashboard() {
     : ''
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadDashboard() {
       setLoading(true)
 
@@ -61,9 +63,12 @@ export default function Dashboard() {
         console.error(
           competitionTeamsError || participantsError || eventsError
         )
+        if (shouldIgnore) return
         setLoading(false)
         return
       }
+
+      if (shouldIgnore) return
 
       setCompetitionTeams(competitionTeamsData || [])
       setParticipants(participantsData || [])
@@ -73,7 +78,9 @@ export default function Dashboard() {
 
     if (activeCampId) {
       loadDashboard()
-      return
+      return () => {
+        shouldIgnore = true
+      }
     }
 
     const timeoutId = window.setTimeout(() => {
