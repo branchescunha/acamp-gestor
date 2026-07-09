@@ -107,13 +107,124 @@ export default function Export() {
       .slice(0, 10)}.xlsx`
   }
 
-  function getTeamName(team, settings, tribes = []) {
+  function getLegacyGymkhanaTeamName(team, settings, tribes = []) {
     const tribe = tribes.find((item) => item.id === team)
 
     if (tribe) return tribe.name
     if (team === 'A') return settings.team_a_name || 'Equipe A'
     if (team === 'B') return settings.team_b_name || 'Equipe B'
-    return 'Sem equipe'
+    return 'Sem time/equipe'
+  }
+
+  function getCompetitionTeamStatusLabel(status) {
+    if (status === 'active') return 'Ativo'
+    if (status === 'inactive') return 'Inativo'
+    return status || ''
+  }
+
+  function getScoreDestination(eventItem) {
+    if (eventItem.competition_team_id || eventItem.competition_teams) {
+      return {
+        type: 'Time',
+        label: eventItem.competition_teams?.name || 'Time não encontrado',
+        competitionTeamId: eventItem.competition_team_id || '',
+        tribeId: eventItem.tribe_id || '',
+        tribeLabel: eventItem.tribes?.name || '',
+      }
+    }
+
+    if (eventItem.tribe_id || eventItem.tribes) {
+      return {
+        type: 'Equipe/Quarto',
+        label: eventItem.tribes?.name || 'Equipe/Quarto não encontrada',
+        competitionTeamId: '',
+        tribeId: eventItem.tribe_id || '',
+        tribeLabel: eventItem.tribes?.name || '',
+      }
+    }
+
+    return {
+      type: 'Sem destino',
+      label: 'Sem destino',
+      competitionTeamId: '',
+      tribeId: '',
+      tribeLabel: '',
+    }
+  }
+
+  function getScoreParticipantLabel(eventItem) {
+    if (eventItem.participants?.full_name) return eventItem.participants.full_name
+    if (eventItem.competition_team_id) return 'Time inteiro'
+    if (eventItem.tribe_id) return 'Equipe/Quarto inteiro'
+    return 'Sem participante'
+  }
+
+  function getGymkhanaWinner(eventItem, competitionTeams, tribes, settings) {
+    if (eventItem.winning_competition_team_id) {
+      const team = competitionTeams.find(
+        (item) => item.id === eventItem.winning_competition_team_id
+      )
+
+      return {
+        type: 'Time',
+        label: team?.name || 'Time não encontrado',
+        competitionTeamId: eventItem.winning_competition_team_id,
+        legacyValue: eventItem.winning_team || '',
+      }
+    }
+
+    if (eventItem.winning_team === 'A' || eventItem.winning_team === 'B') {
+      return {
+        type: 'Legado A/B',
+        label: getLegacyGymkhanaTeamName(eventItem.winning_team, settings, tribes),
+        competitionTeamId: '',
+        legacyValue: eventItem.winning_team,
+      }
+    }
+
+    const legacyTribe = tribes.find((tribe) => tribe.id === eventItem.winning_team)
+
+    return {
+      type: legacyTribe ? 'Equipe/Quarto legado' : 'Legado não encontrado',
+      label: legacyTribe?.name || eventItem.winning_team || 'Sem vencedor',
+      competitionTeamId: '',
+      legacyValue: eventItem.winning_team || '',
+    }
+  }
+
+  function getGymkhanaWinnerParticipantsCount(eventItem, participants) {
+    if (eventItem.winning_competition_team_id) {
+      return participants.filter(
+        (participant) =>
+          participant.is_active &&
+          participant.competition_team_id === eventItem.winning_competition_team_id
+      ).length
+    }
+
+    if (eventItem.winning_team === 'A' || eventItem.winning_team === 'B') {
+      return participants.filter(
+        (participant) =>
+          participant.is_active &&
+          participant.gymkhana_team === eventItem.winning_team
+      ).length
+    }
+
+    return participants.filter(
+      (participant) =>
+        participant.is_active && participant.tribe_id === eventItem.winning_team
+    ).length
+  }
+
+  function getGymkhanaDistributedPoints(eventItem, participants) {
+    const points = Number(eventItem.points_per_member || 0)
+
+    if (eventItem.winning_competition_team_id) return points
+
+    if (eventItem.winning_team === 'A' || eventItem.winning_team === 'B') {
+      return getGymkhanaWinnerParticipantsCount(eventItem, participants) * points
+    }
+
+    return points
   }
 
   function styleWorksheet(worksheet) {
@@ -194,6 +305,14 @@ export default function Export() {
         .eq('camp_id', exportCampId)
         .order('name')
 
+      const { data: competitionTeamsData, error: competitionTeamsError } =
+        await supabase
+          .from('competition_teams')
+          .select('*')
+          .eq('camp_id', exportCampId)
+          .order('status', { ascending: true })
+          .order('name', { ascending: true })
+
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
@@ -204,6 +323,12 @@ export default function Export() {
             name,
             symbol,
             color
+          ),
+          competition_teams (
+            name,
+            symbol,
+            color,
+            status
           )
         `
           )
@@ -219,6 +344,12 @@ export default function Export() {
             name,
             symbol,
             color
+          ),
+          competition_teams (
+            name,
+            symbol,
+            color,
+            status
           ),
           participants (
             full_name
@@ -259,6 +390,7 @@ export default function Export() {
 
       if (
         tribesError ||
+        competitionTeamsError ||
         participantsError ||
         eventsError ||
         gymkhanaError ||
@@ -267,6 +399,7 @@ export default function Export() {
       ) {
         throw (
           tribesError ||
+          competitionTeamsError ||
           participantsError ||
           eventsError ||
           gymkhanaError ||
@@ -276,6 +409,7 @@ export default function Export() {
       }
 
       const tribes = tribesData || []
+      const competitionTeams = competitionTeamsData || []
       const participants = participantsData || []
       const events = eventsData || []
       const gymkhanaEvents = gymkhanaData || []
@@ -287,11 +421,30 @@ export default function Export() {
         team_b_name: settingsData?.team_b_name || 'Equipe B',
       }
 
-      const ranking = calculateRanking(tribes, events, participants, {
-        includeInactive: true,
-      })
+      const competitiveEvents = events.filter(
+        (eventItem) => eventItem.competition_team_id
+      )
 
-      const activeRanking = ranking.filter((tribe) => tribe.isActive)
+      const ranking = calculateRanking(
+        competitionTeams,
+        competitiveEvents,
+        participants,
+        {
+          includeInactive: true,
+          scoreTeamIdField: 'competition_team_id',
+          participantTeamIdField: 'competition_team_id',
+        }
+      )
+
+      const activeRanking = ranking.filter((team) => team.isActive)
+
+      const activeCompetitionTeams = competitionTeams.filter(
+        (team) => team.status === 'active'
+      )
+
+      const inactiveCompetitionTeams = competitionTeams.filter(
+        (team) => team.status === 'inactive'
+      )
 
       const positiveEvents = events.filter(
         (eventItem) => Number(eventItem.points || 0) > 0
@@ -301,21 +454,25 @@ export default function Export() {
         (eventItem) => Number(eventItem.points || 0) < 0
       )
 
-      const teamAParticipants = participants.filter(
-        (participant) => participant.gymkhana_team === 'A'
+      const competitivePositiveEvents = competitiveEvents.filter(
+        (eventItem) => Number(eventItem.points || 0) > 0
       )
 
-      const teamBParticipants = participants.filter(
-        (participant) => participant.gymkhana_team === 'B'
+      const competitivePenaltyEvents = competitiveEvents.filter(
+        (eventItem) => Number(eventItem.points || 0) < 0
       )
 
       const {
         positivePoints: totalPositivePoints,
         penaltyPoints: totalPenaltyPoints,
         total: totalBalance,
-      } = summarizeScores(events)
+      } = summarizeScores(competitiveEvents)
 
       const leader = activeRanking[0]
+
+      const legacyGymkhanaParticipants = participants.filter(
+        (participant) => participant.gymkhana_team
+      )
 
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'AcampGestor'
@@ -346,12 +503,10 @@ export default function Export() {
             value: formatCampDate(selectedCamp.end_date),
           },
           { metric: 'Data da exportação', value: formatDate(new Date()) },
-          { metric: 'Equipes cadastradas', value: tribes.length },
-          { metric: 'Equipes ativas', value: activeRanking.length },
-          {
-            metric: 'Equipes inativas',
-            value: tribes.length - activeRanking.length,
-          },
+          { metric: 'Times cadastrados', value: competitionTeams.length },
+          { metric: 'Times ativos', value: activeCompetitionTeams.length },
+          { metric: 'Times inativos', value: inactiveCompetitionTeams.length },
+          { metric: 'Equipes/Quartos cadastrados', value: tribes.length },
           {
             metric: 'Participantes cadastrados',
             value: participants.length,
@@ -361,16 +516,33 @@ export default function Export() {
             value: participants.filter((participant) => participant.is_active)
               .length,
           },
-          { metric: 'Total de lançamentos', value: events.length },
-          { metric: 'Lançamentos positivos', value: positiveEvents.length },
-          { metric: 'Penalidades', value: penaltyEvents.length },
-          { metric: 'Pontos positivos', value: totalPositivePoints },
-          { metric: 'Pontos perdidos', value: totalPenaltyPoints },
-          { metric: 'Saldo geral de pontos', value: totalBalance },
-          { metric: 'Equipe líder atual', value: leader?.name || '-' },
           {
-            metric: 'Saldo da equipe líder',
+            metric: 'Lançamentos competitivos',
+            value: competitiveEvents.length,
+          },
+          {
+            metric: 'Lançamentos positivos competitivos',
+            value: competitivePositiveEvents.length,
+          },
+          {
+            metric: 'Penalidades competitivas',
+            value: competitivePenaltyEvents.length,
+          },
+          { metric: 'Pontos positivos competitivos', value: totalPositivePoints },
+          { metric: 'Pontos perdidos competitivos', value: totalPenaltyPoints },
+          { metric: 'Saldo competitivo geral', value: totalBalance },
+          { metric: 'Time líder atual', value: leader?.name || '-' },
+          {
+            metric: 'Saldo do Time líder',
             value: leader ? leader.total : '-',
+          },
+          {
+            metric: 'Lançamentos totais no histórico',
+            value: events.length,
+          },
+          {
+            metric: 'Participantes com gincana legada A/B',
+            value: legacyGymkhanaParticipants.length,
           },
           {
             metric: 'Gincanas cadastradas',
@@ -388,43 +560,76 @@ export default function Export() {
         'Ranking Atual',
         [
           { header: 'Posição', key: 'position' },
-          { header: 'ID', key: 'id' },
-          { header: 'Equipe', key: 'name' },
+          { header: 'ID do Time', key: 'id' },
+          { header: 'Time', key: 'name' },
           { header: 'Símbolo', key: 'symbol' },
           { header: 'Cor', key: 'color' },
-          { header: 'Tipo de quarto', key: 'room_type' },
-          { header: 'Quarto', key: 'room_name' },
-          { header: 'Responsável', key: 'leader_name' },
+          { header: 'Líder/Responsável', key: 'leader_name' },
           { header: 'Participantes ativos', key: 'participantsCount' },
           { header: 'Pontos positivos', key: 'positivePoints' },
           { header: 'Penalidades', key: 'penaltyPoints' },
           { header: 'Saldo total', key: 'total' },
           { header: 'Lançamentos', key: 'eventsCount' },
-          { header: 'Status', key: 'status' },
-          { header: 'Criada em', key: 'created_at' },
+          { header: 'Participa do ranking?', key: 'isActive' },
+          { header: 'Status cadastral', key: 'status' },
+          { header: 'Criado em', key: 'created_at' },
         ],
-        ranking.map((tribe, index) => ({
+        ranking.map((team, index) => ({
           position: index + 1,
-          id: tribe.id,
-          name: tribe.name,
-          symbol: tribe.symbol,
-          color: tribe.color,
-          room_type: tribe.room_type || '',
-          room_name: tribe.room_name || '',
-          leader_name: tribe.leader_name || '',
-          participantsCount: tribe.participantsCount,
-          positivePoints: tribe.positivePoints,
-          penaltyPoints: tribe.penaltyPoints,
-          total: tribe.total,
-          eventsCount: tribe.eventsCount,
-          status: tribe.isActive ? 'Ativa' : 'Inativa',
-          created_at: formatDate(tribe.created_at),
+          id: team.id,
+          name: team.name,
+          symbol: team.symbol,
+          color: team.color,
+          leader_name: team.leader_name || '',
+          participantsCount: team.participantsCount,
+          positivePoints: team.positivePoints,
+          penaltyPoints: team.penaltyPoints,
+          total: team.total,
+          eventsCount: team.eventsCount,
+          isActive: team.isActive ? 'Sim' : 'Não',
+          status: getCompetitionTeamStatusLabel(team.status),
+          created_at: formatDate(team.created_at),
         }))
       )
 
       addSheet(
         workbook,
-        'Equipes',
+        'Times',
+        [
+          { header: 'ID', key: 'id' },
+          { header: 'Nome', key: 'name' },
+          { header: 'Símbolo', key: 'symbol' },
+          { header: 'Cor', key: 'color' },
+          { header: 'Líder/Responsável', key: 'leader_name' },
+          { header: 'Status cadastral', key: 'status' },
+          { header: 'Participantes', key: 'participantsCount' },
+          { header: 'Participantes ativos', key: 'activeParticipantsCount' },
+          { header: 'Criado em', key: 'created_at' },
+        ],
+        competitionTeams.map((team) => {
+          const teamParticipants = participants.filter(
+            (participant) => participant.competition_team_id === team.id
+          )
+
+          return {
+            id: team.id,
+            name: team.name,
+            symbol: team.symbol,
+            color: team.color,
+            leader_name: team.leader_name || '',
+            status: getCompetitionTeamStatusLabel(team.status),
+            participantsCount: teamParticipants.length,
+            activeParticipantsCount: teamParticipants.filter(
+              (participant) => participant.is_active
+            ).length,
+            created_at: formatDate(team.created_at),
+          }
+        })
+      )
+
+      addSheet(
+        workbook,
+        'Equipes-Quartos',
         [
           { header: 'ID', key: 'id' },
           { header: 'Nome', key: 'name' },
@@ -433,22 +638,30 @@ export default function Export() {
           { header: 'Tipo de quarto', key: 'room_type' },
           { header: 'Quarto', key: 'room_name' },
           { header: 'Responsável', key: 'leader_name' },
-          { header: 'Participantes ativos', key: 'participantsCount' },
-          { header: 'Status real', key: 'status' },
+          { header: 'Participantes', key: 'participantsCount' },
+          { header: 'Participantes ativos', key: 'activeParticipantsCount' },
           { header: 'Criada em', key: 'created_at' },
         ],
-        ranking.map((tribe) => ({
-          id: tribe.id,
-          name: tribe.name,
-          symbol: tribe.symbol,
-          color: tribe.color,
-          room_type: tribe.room_type || '',
-          room_name: tribe.room_name || '',
-          leader_name: tribe.leader_name || '',
-          participantsCount: tribe.participantsCount,
-          status: tribe.isActive ? 'Ativa' : 'Inativa',
-          created_at: formatDate(tribe.created_at),
-        }))
+        tribes.map((tribe) => {
+          const tribeParticipants = participants.filter(
+            (participant) => participant.tribe_id === tribe.id
+          )
+
+          return {
+            id: tribe.id,
+            name: tribe.name,
+            symbol: tribe.symbol,
+            color: tribe.color,
+            room_type: tribe.room_type || '',
+            room_name: tribe.room_name || '',
+            leader_name: tribe.leader_name || '',
+            participantsCount: tribeParticipants.length,
+            activeParticipantsCount: tribeParticipants.filter(
+              (participant) => participant.is_active
+            ).length,
+            created_at: formatDate(tribe.created_at),
+          }
+        })
       )
 
       addSheet(
@@ -468,8 +681,11 @@ export default function Export() {
           { header: 'Equipe da gincana legada', key: 'gymkhana_team' },
           { header: 'Telefone', key: 'phone' },
           { header: 'Telefone responsável', key: 'guardian_phone' },
-          { header: 'ID da equipe', key: 'tribe_id' },
-          { header: 'Equipe', key: 'tribe_name' },
+          { header: 'ID da Equipe/Quarto', key: 'tribe_id' },
+          { header: 'Equipe/Quarto', key: 'tribe_name' },
+          { header: 'ID do Time', key: 'competition_team_id' },
+          { header: 'Time', key: 'competition_team_name' },
+          { header: 'Status do Time', key: 'competition_team_status' },
           { header: 'Diretoria', key: 'is_board_member' },
           { header: 'Status', key: 'is_active' },
           { header: 'Restrição alimentar', key: 'food_restriction' },
@@ -489,7 +705,7 @@ export default function Export() {
           shirt_size: participant.shirt_size || '',
           gender: participant.gender || '',
           group_type: participant.group_type || '',
-          gymkhana_team: getTeamName(
+          gymkhana_team: getLegacyGymkhanaTeamName(
             participant.gymkhana_team,
             settings,
             tribes
@@ -498,6 +714,11 @@ export default function Export() {
           guardian_phone: participant.guardian_phone || '',
           tribe_id: participant.tribe_id || '',
           tribe_name: participant.tribes?.name || '',
+          competition_team_id: participant.competition_team_id || '',
+          competition_team_name: participant.competition_teams?.name || '',
+          competition_team_status: getCompetitionTeamStatusLabel(
+            participant.competition_teams?.status
+          ),
           is_board_member: participant.is_board_member ? 'Sim' : 'Não',
           is_active: participant.is_active ? 'Ativo' : 'Inativo',
           food_restriction: participant.food_restriction || '',
@@ -512,8 +733,12 @@ export default function Export() {
         [
           { header: 'ID', key: 'id' },
           { header: 'Data', key: 'created_at' },
-          { header: 'ID da equipe', key: 'tribe_id' },
-          { header: 'Equipe', key: 'tribe_name' },
+          { header: 'Tipo do destino', key: 'destination_type' },
+          { header: 'Destino', key: 'destination_name' },
+          { header: 'ID do Time', key: 'competition_team_id' },
+          { header: 'Time', key: 'competition_team_name' },
+          { header: 'ID da Equipe/Quarto', key: 'tribe_id' },
+          { header: 'Equipe/Quarto', key: 'tribe_name' },
           { header: 'ID do participante', key: 'participant_id' },
           { header: 'Participante', key: 'participant_name' },
           { header: 'Tipo', key: 'type' },
@@ -523,21 +748,30 @@ export default function Export() {
           { header: 'Observações', key: 'notes' },
           { header: 'ID da gincana', key: 'gymkhana_event_id' },
         ],
-        events.map((eventItem) => ({
-          id: eventItem.id,
-          created_at: formatDate(eventItem.created_at),
-          tribe_id: eventItem.tribe_id || '',
-          tribe_name: eventItem.tribes?.name || '',
-          participant_id: eventItem.participant_id || '',
-          participant_name:
-            eventItem.participants?.full_name || 'Equipe inteira',
-          type: Number(eventItem.points || 0) < 0 ? 'Penalidade' : 'Ponto',
-          category: eventItem.category || '',
-          points: eventItem.points,
-          reason: eventItem.reason || '',
-          notes: eventItem.notes || '',
-          gymkhana_event_id: eventItem.gymkhana_event_id || '',
-        }))
+        events.map((eventItem) => {
+          const destination = getScoreDestination(eventItem)
+
+          return {
+            id: eventItem.id,
+            created_at: formatDate(eventItem.created_at),
+            destination_type: destination.type,
+            destination_name: destination.label,
+            competition_team_id: destination.competitionTeamId,
+            competition_team_name:
+              eventItem.competition_teams?.name ||
+              (destination.type === 'Time' ? destination.label : ''),
+            tribe_id: destination.tribeId,
+            tribe_name: destination.tribeLabel,
+            participant_id: eventItem.participant_id || '',
+            participant_name: getScoreParticipantLabel(eventItem),
+            type: Number(eventItem.points || 0) < 0 ? 'Penalidade' : 'Ponto',
+            category: eventItem.category || '',
+            points: eventItem.points,
+            reason: eventItem.reason || '',
+            notes: eventItem.notes || '',
+            gymkhana_event_id: eventItem.gymkhana_event_id || '',
+          }
+        })
       )
 
       addSheet(
@@ -545,23 +779,28 @@ export default function Export() {
         'Pontos Positivos',
         [
           { header: 'Data', key: 'created_at' },
-          { header: 'Equipe', key: 'tribe_name' },
+          { header: 'Tipo do destino', key: 'destination_type' },
+          { header: 'Destino', key: 'destination_name' },
           { header: 'Participante', key: 'participant_name' },
           { header: 'Categoria', key: 'category' },
           { header: 'Pontos', key: 'points' },
           { header: 'Motivo', key: 'reason' },
           { header: 'Observações', key: 'notes' },
         ],
-        positiveEvents.map((eventItem) => ({
-          created_at: formatDate(eventItem.created_at),
-          tribe_name: eventItem.tribes?.name || '',
-          participant_name:
-            eventItem.participants?.full_name || 'Equipe inteira',
-          category: eventItem.category || '',
-          points: eventItem.points,
-          reason: eventItem.reason || '',
-          notes: eventItem.notes || '',
-        }))
+        positiveEvents.map((eventItem) => {
+          const destination = getScoreDestination(eventItem)
+
+          return {
+            created_at: formatDate(eventItem.created_at),
+            destination_type: destination.type,
+            destination_name: destination.label,
+            participant_name: getScoreParticipantLabel(eventItem),
+            category: eventItem.category || '',
+            points: eventItem.points,
+            reason: eventItem.reason || '',
+            notes: eventItem.notes || '',
+          }
+        })
       )
 
       addSheet(
@@ -569,23 +808,28 @@ export default function Export() {
         'Penalidades',
         [
           { header: 'Data', key: 'created_at' },
-          { header: 'Equipe', key: 'tribe_name' },
+          { header: 'Tipo do destino', key: 'destination_type' },
+          { header: 'Destino', key: 'destination_name' },
           { header: 'Participante', key: 'participant_name' },
           { header: 'Categoria', key: 'category' },
           { header: 'Pontos', key: 'points' },
           { header: 'Motivo', key: 'reason' },
           { header: 'Observações', key: 'notes' },
         ],
-        penaltyEvents.map((eventItem) => ({
-          created_at: formatDate(eventItem.created_at),
-          tribe_name: eventItem.tribes?.name || '',
-          participant_name:
-            eventItem.participants?.full_name || 'Equipe inteira',
-          category: eventItem.category || '',
-          points: eventItem.points,
-          reason: eventItem.reason || '',
-          notes: eventItem.notes || '',
-        }))
+        penaltyEvents.map((eventItem) => {
+          const destination = getScoreDestination(eventItem)
+
+          return {
+            created_at: formatDate(eventItem.created_at),
+            destination_type: destination.type,
+            destination_name: destination.label,
+            participant_name: getScoreParticipantLabel(eventItem),
+            category: eventItem.category || '',
+            points: eventItem.points,
+            reason: eventItem.reason || '',
+            notes: eventItem.notes || '',
+          }
+        })
       )
 
       addSheet(
@@ -595,40 +839,41 @@ export default function Export() {
           { header: 'ID', key: 'id' },
           { header: 'Data', key: 'created_at' },
           { header: 'Prova', key: 'title' },
-          { header: 'Equipe vencedora', key: 'winning_team' },
-          { header: 'Pontos', key: 'points_per_member' },
-          { header: 'Participantes ativos da equipe', key: 'members_count' },
+          { header: 'Tipo do vencedor', key: 'winner_type' },
+          { header: 'Time vencedor', key: 'winner_name' },
+          { header: 'ID do Time vencedor', key: 'competition_team_id' },
+          { header: 'Vencedor legado', key: 'legacy_winning_team' },
+          { header: 'Pontos do resultado', key: 'points_per_member' },
+          { header: 'Participantes ativos do vencedor', key: 'members_count' },
           { header: 'Total distribuído', key: 'total_distributed' },
           { header: 'Observações', key: 'notes' },
         ],
         gymkhanaEvents.map((eventItem) => {
-          const legacyMembersCount =
-            eventItem.winning_team === 'A'
-              ? teamAParticipants.filter((participant) => participant.is_active)
-                  .length
-              : teamBParticipants.filter((participant) => participant.is_active)
-                  .length
-          const realTeamMembersCount = participants.filter(
-            (participant) =>
-              participant.is_active &&
-              participant.tribe_id === eventItem.winning_team
-          ).length
-          const membersCount =
-            eventItem.winning_team === 'A' || eventItem.winning_team === 'B'
-              ? legacyMembersCount
-              : realTeamMembersCount
+          const winner = getGymkhanaWinner(
+            eventItem,
+            competitionTeams,
+            tribes,
+            settings
+          )
+          const membersCount = getGymkhanaWinnerParticipantsCount(
+            eventItem,
+            participants
+          )
 
           return {
             id: eventItem.id,
             created_at: formatDate(eventItem.created_at),
             title: eventItem.title,
-            winning_team: getTeamName(eventItem.winning_team, settings, tribes),
+            winner_type: winner.type,
+            winner_name: winner.label,
+            competition_team_id: winner.competitionTeamId,
+            legacy_winning_team: winner.legacyValue,
             points_per_member: eventItem.points_per_member,
             members_count: membersCount,
-            total_distributed:
-              eventItem.winning_team === 'A' || eventItem.winning_team === 'B'
-                ? membersCount * Number(eventItem.points_per_member || 0)
-                : Number(eventItem.points_per_member || 0),
+            total_distributed: getGymkhanaDistributedPoints(
+              eventItem,
+              participants
+            ),
             notes: eventItem.notes || '',
           }
         })
@@ -640,7 +885,7 @@ export default function Export() {
         [
           { header: 'ID', key: 'id' },
           { header: 'Data', key: 'created_at' },
-          { header: 'Equipe', key: 'tribe_name' },
+          { header: 'Equipe/Quarto', key: 'tribe_name' },
           { header: 'Tipo de quarto', key: 'room_type' },
           { header: 'Quarto', key: 'room_name' },
           { header: 'Dia', key: 'inspection_day' },
@@ -667,64 +912,34 @@ export default function Export() {
 
       addSheet(
         workbook,
-        'Estatísticas por Equipe',
+        'Estatísticas por Time',
         [
-          { header: 'Equipe', key: 'name' },
-          { header: 'Tipo de quarto', key: 'room_type' },
-          { header: 'Quarto', key: 'room_name' },
-          { header: 'Responsável', key: 'leader_name' },
+          { header: 'Time', key: 'name' },
+          { header: 'Líder/Responsável', key: 'leader_name' },
           { header: 'Participantes ativos', key: 'participantsCount' },
           { header: 'Pontos positivos', key: 'positivePoints' },
           { header: 'Penalidades', key: 'penaltyPoints' },
           { header: 'Saldo total', key: 'total' },
           { header: 'Lançamentos', key: 'eventsCount' },
-          { header: 'Status', key: 'status' },
+          { header: 'Participa do ranking?', key: 'isActive' },
+          { header: 'Status cadastral', key: 'status' },
         ],
-        ranking.map((tribe) => ({
-          name: tribe.name,
-          room_type: tribe.room_type || '',
-          room_name: tribe.room_name || '',
-          leader_name: tribe.leader_name || '',
-          participantsCount: tribe.participantsCount,
-          positivePoints: tribe.positivePoints,
-          penaltyPoints: tribe.penaltyPoints,
-          total: tribe.total,
-          eventsCount: tribe.eventsCount,
-          status: tribe.isActive ? 'Ativa' : 'Inativa',
+        ranking.map((team) => ({
+          name: team.name,
+          leader_name: team.leader_name || '',
+          participantsCount: team.participantsCount,
+          positivePoints: team.positivePoints,
+          penaltyPoints: team.penaltyPoints,
+          total: team.total,
+          eventsCount: team.eventsCount,
+          isActive: team.isActive ? 'Sim' : 'Não',
+          status: getCompetitionTeamStatusLabel(team.status),
         }))
-      )
-
-      addSheet(
-        workbook,
-        'Equipes da Gincana',
-        [
-          { header: 'Equipe', key: 'team' },
-          { header: 'Integrantes', key: 'members' },
-          { header: 'Participantes ativos', key: 'active_members' },
-          { header: 'ID da equipe', key: 'team_id' },
-        ],
-        tribes.map((tribe) => {
-          const teamMembers = participants.filter(
-            (participant) => participant.tribe_id === tribe.id
-          )
-
-          return {
-            team: tribe.name,
-            members: teamMembers.length,
-            active_members: teamMembers.filter(
-              (participant) => participant.is_active
-            ).length,
-            team_id: tribe.id,
-          }
-        })
       )
 
       const buffer = await workbook.xlsx.writeBuffer()
 
-      saveAs(
-        new Blob([buffer]),
-        getExportFileName(selectedCamp)
-      )
+      saveAs(new Blob([buffer]), getExportFileName(selectedCamp))
     } catch (error) {
       console.error(error)
       alert(`Erro ao exportar relatório: ${error.message}`)
@@ -780,8 +995,9 @@ export default function Export() {
           </h2>
 
           <p className="mt-2 text-sm text-zinc-400">
-            A exportação inclui ranking, equipes, participantes, pontuações,
-            histórico, gincana e inspeções apenas do acampamento escolhido.
+            A exportação inclui ranking dos Times, Times, Equipes/Quartos,
+            participantes, pontuações, histórico, gincana e inspeções apenas do
+            acampamento escolhido.
           </p>
 
           <select
@@ -810,10 +1026,10 @@ export default function Export() {
         <h2 className="text-xl font-bold">Relatório completo em Excel</h2>
 
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-400">
-          O arquivo inclui dados do acampamento, resumo geral, ranking, equipes, participantes,
-          histórico completo, pontos positivos, penalidades, gincana, inspeções
-          de quartos, estatísticas por equipe e estatísticas das equipes da
-          gincana.
+          O arquivo inclui dados do acampamento, resumo geral, ranking dos
+          Times, Times, Equipes/Quartos, participantes, histórico completo,
+          pontos positivos, penalidades, gincana, inspeções de quartos e
+          estatísticas por Time.
         </p>
 
         <button
