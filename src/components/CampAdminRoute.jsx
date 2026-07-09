@@ -26,11 +26,14 @@ export default function CampAdminRoute() {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadCamp() {
       setLoadingCamp(true)
       setNotFound(false)
 
       if (!isValidSlug(campSlug)) {
+        if (shouldIgnore) return
         setCamp(null)
         setNotFound(true)
         setLoadingCamp(false)
@@ -42,6 +45,8 @@ export default function CampAdminRoute() {
         .select('id, name, slug, created_by, organization_id')
         .eq('slug', campSlug)
         .maybeSingle()
+
+      if (shouldIgnore) return
 
       if (error || !data) {
         if (error) console.error(error)
@@ -62,6 +67,8 @@ export default function CampAdminRoute() {
           .eq('status', 'active')
           .maybeSingle()
 
+        if (shouldIgnore) return
+
         if (membershipError) console.error(membershipError)
 
         canAccessCamp = Boolean(membershipData)
@@ -81,6 +88,10 @@ export default function CampAdminRoute() {
 
     if (session && profile && isActive) {
       loadCamp()
+    }
+
+    return () => {
+      shouldIgnore = true
     }
   }, [
     campSlug,

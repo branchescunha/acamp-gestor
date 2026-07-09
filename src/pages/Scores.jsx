@@ -43,6 +43,8 @@ export default function Scores() {
   const { activeCampId } = useActiveCamp()
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadData() {
       setLoading(true)
 
@@ -104,9 +106,12 @@ export default function Scores() {
             participantsError ||
             eventsError
         )
+        if (shouldIgnore) return
         setLoading(false)
         return
       }
+
+      if (shouldIgnore) return
 
       setTribes(tribesData || [])
       setCompetitionTeams(competitionTeamsData || [])
@@ -117,7 +122,9 @@ export default function Scores() {
 
     if (activeCampId) {
       loadData()
-      return
+      return () => {
+        shouldIgnore = true
+      }
     }
 
     const timeoutId = window.setTimeout(() => {

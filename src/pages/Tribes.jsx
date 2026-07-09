@@ -45,6 +45,8 @@ export default function Tribes() {
   const { activeCampId } = useActiveCamp()
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadData() {
       setLoading(true)
 
@@ -64,9 +66,12 @@ export default function Tribes() {
 
       if (tribesError || participantsError) {
         console.error(tribesError || participantsError)
+        if (shouldIgnore) return
         setLoading(false)
         return
       }
+
+      if (shouldIgnore) return
 
       setTribes(tribesData || [])
       setParticipants(participantsData || [])
@@ -75,7 +80,9 @@ export default function Tribes() {
 
     if (activeCampId) {
       loadData()
-      return
+      return () => {
+        shouldIgnore = true
+      }
     }
 
     const timeoutId = window.setTimeout(() => {

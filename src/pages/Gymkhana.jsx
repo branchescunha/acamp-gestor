@@ -29,10 +29,11 @@ export default function Gymkhana() {
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (shouldIgnore = () => false) => {
     setLoading(true)
 
     if (!activeCampId) {
+      if (shouldIgnore()) return
       setCompetitionTeams([])
       setLegacyTribes([])
       setParticipants([])
@@ -96,9 +97,12 @@ export default function Gymkhana() {
           historyError ||
           settingsError
       )
+      if (shouldIgnore()) return
       setLoading(false)
       return
     }
+
+    if (shouldIgnore()) return
 
     const settingsData = settingsRows?.[0]
 
@@ -114,13 +118,16 @@ export default function Gymkhana() {
   }, [activeCampId])
 
   useEffect(() => {
+    let shouldIgnore = false
+
     const timeoutId = window.setTimeout(() => {
       setForm(initialForm)
       setEditingId(null)
-      void loadData()
+      void loadData(() => shouldIgnore)
     }, 0)
 
     return () => {
+      shouldIgnore = true
       window.clearTimeout(timeoutId)
     }
   }, [loadData])

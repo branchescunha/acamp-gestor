@@ -37,8 +37,9 @@ export default function Inspections() {
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (shouldIgnore = () => false) => {
     if (!activeCampId) {
+      if (shouldIgnore()) return
       setTribes([])
       setInspections([])
       setLoading(false)
@@ -70,9 +71,12 @@ export default function Inspections() {
 
     if (tribesError || inspectionsError) {
       console.error(tribesError || inspectionsError)
+      if (shouldIgnore()) return
       setLoading(false)
       return
     }
+
+    if (shouldIgnore()) return
 
     setTribes(tribesData || [])
     setInspections(inspectionsData || [])
@@ -80,11 +84,14 @@ export default function Inspections() {
   }, [activeCampId])
 
   useEffect(() => {
+    let shouldIgnore = false
+
     const timeoutId = window.setTimeout(() => {
-      void loadData()
+      void loadData(() => shouldIgnore)
     }, 0)
 
     return () => {
+      shouldIgnore = true
       window.clearTimeout(timeoutId)
     }
   }, [loadData])

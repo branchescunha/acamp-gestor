@@ -12,11 +12,14 @@ export default function PublicCampRanking() {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadRanking() {
       setLoading(true)
       setNotFound(false)
 
       if (!isValidSlug(campSlug)) {
+        if (shouldIgnore) return
         setCamp(null)
         setRanking([])
         setNotFound(true)
@@ -30,6 +33,8 @@ export default function PublicCampRanking() {
         .eq('slug', campSlug)
         .eq('public_ranking_enabled', true)
         .maybeSingle()
+
+      if (shouldIgnore) return
 
       if (campError) {
         console.error(campError)
@@ -64,6 +69,8 @@ export default function PublicCampRanking() {
           .eq('camp_id', campData.id)
           .eq('is_active', true)
 
+      if (shouldIgnore) return
+
       if (teamsError || eventsError || participantsError) {
         console.error(teamsError || eventsError || participantsError)
         setNotFound(true)
@@ -88,6 +95,10 @@ export default function PublicCampRanking() {
     }
 
     loadRanking()
+
+    return () => {
+      shouldIgnore = true
+    }
   }, [campSlug])
 
   function getPointsColor(total, index) {

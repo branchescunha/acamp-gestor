@@ -68,6 +68,8 @@ export default function CompetitionTeams() {
   const { activeCampId } = useActiveCamp()
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadTeams() {
       setLoading(true)
 
@@ -80,9 +82,12 @@ export default function CompetitionTeams() {
 
       if (error) {
         console.error(error)
+        if (shouldIgnore) return
         setLoading(false)
         return
       }
+
+      if (shouldIgnore) return
 
       setTeams(data || [])
       setLoading(false)
@@ -90,7 +95,9 @@ export default function CompetitionTeams() {
 
     if (activeCampId) {
       loadTeams()
-      return
+      return () => {
+        shouldIgnore = true
+      }
     }
 
     const timeoutId = window.setTimeout(() => {
