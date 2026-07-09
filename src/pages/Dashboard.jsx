@@ -6,7 +6,7 @@ import { getCampNameStorageKey, useActiveCamp } from '../hooks/useActiveCamp'
 import { supabase } from '../lib/supabase'
 
 export default function Dashboard() {
-  const [tribes, setTribes] = useState([])
+  const [competitionTeams, setCompetitionTeams] = useState([])
   const [participants, setParticipants] = useState([])
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -19,16 +19,18 @@ export default function Dashboard() {
     async function loadDashboard() {
       setLoading(true)
 
-      const { data: tribesData, error: tribesError } = await supabase
-        .from('tribes')
-        .select('*')
-        .eq('camp_id', activeCampId)
-        .order('name')
+      const { data: competitionTeamsData, error: competitionTeamsError } =
+        await supabase
+          .from('competition_teams')
+          .select('id, name, color, symbol, status, camp_id')
+          .eq('camp_id', activeCampId)
+          .eq('status', 'active')
+          .order('name')
 
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
-          .select('*')
+          .select('id, competition_team_id, is_active')
           .eq('camp_id', activeCampId)
           .eq('is_active', true)
 
@@ -36,8 +38,12 @@ export default function Dashboard() {
         .from('score_events')
         .select(
           `
-          *,
-          tribes (
+          id,
+          points,
+          category,
+          competition_team_id,
+          created_at,
+          competition_teams (
             name,
             symbol,
             color
@@ -48,15 +54,18 @@ export default function Dashboard() {
         `
         )
         .eq('camp_id', activeCampId)
+        .not('competition_team_id', 'is', null)
         .order('created_at', { ascending: false })
 
-      if (tribesError || participantsError || eventsError) {
-        console.error(tribesError || participantsError || eventsError)
+      if (competitionTeamsError || participantsError || eventsError) {
+        console.error(
+          competitionTeamsError || participantsError || eventsError
+        )
         setLoading(false)
         return
       }
 
-      setTribes(tribesData || [])
+      setCompetitionTeams(competitionTeamsData || [])
       setParticipants(participantsData || [])
       setEvents(eventsData || [])
       setLoading(false)
@@ -68,7 +77,7 @@ export default function Dashboard() {
     }
 
     const timeoutId = window.setTimeout(() => {
-      setTribes([])
+      setCompetitionTeams([])
       setParticipants([])
       setEvents([])
       setLoading(false)
@@ -80,12 +89,14 @@ export default function Dashboard() {
   }, [activeCampId])
 
   const ranking = useMemo(() => {
-    return calculateRanking(tribes, events, participants, {
+    return calculateRanking(competitionTeams, events, participants, {
       includeInactive: false,
+      scoreTeamIdField: 'competition_team_id',
+      participantTeamIdField: 'competition_team_id',
     })
-  }, [tribes, participants, events])
+  }, [competitionTeams, participants, events])
 
-  const activeTribes = ranking.length
+  const activeTeams = ranking.length
   const activeParticipants = participants.length
 
   const totalPoints = events.reduce(
@@ -135,8 +146,8 @@ export default function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
-          <p className="text-zinc-400">Equipes ativas</p>
-          <strong className="mt-4 block text-3xl">{activeTribes}</strong>
+          <p className="text-zinc-400">Times ativos</p>
+          <strong className="mt-4 block text-3xl">{activeTeams}</strong>
         </div>
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
@@ -156,7 +167,7 @@ export default function Dashboard() {
         </div>
 
         <div className="rounded-2xl border border-yellow-500/60 bg-yellow-500/10 p-6">
-          <p className="text-zinc-400">Equipe líder</p>
+          <p className="text-zinc-400">Time líder</p>
 
           {leader ? (
             <div className="mt-4 flex items-center gap-4">
@@ -198,16 +209,20 @@ export default function Dashboard() {
                 <div className="flex items-center gap-4">
                   <div
                     className="flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{ backgroundColor: eventItem.tribes?.color }}
+                    style={{
+                      backgroundColor: eventItem.competition_teams?.color,
+                    }}
                   >
-                    {eventItem.tribes?.symbol}
+                    {eventItem.competition_teams?.symbol}
                   </div>
 
                   <div>
-                    <strong>{eventItem.tribes?.name || 'Sem equipe'}</strong>
+                    <strong>
+                      {eventItem.competition_teams?.name || 'Sem time'}
+                    </strong>
 
                     <p className="text-sm text-zinc-400">
-                      {eventItem.participants?.full_name || 'Equipe inteira'} ·{' '}
+                      {eventItem.participants?.full_name || 'Time inteiro'} ·{' '}
                       {eventItem.category}
                     </p>
                   </div>

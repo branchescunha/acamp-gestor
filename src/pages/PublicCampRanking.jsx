@@ -46,26 +46,26 @@ export default function PublicCampRanking() {
         return
       }
 
-      const { data: tribesData, error: tribesError } = await supabase
-        .from('public_ranking_tribes')
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('public_ranking_competition_teams')
         .select('id, name, color, symbol')
         .eq('camp_id', campData.id)
         .order('name')
 
       const { data: eventsData, error: eventsError } = await supabase
-        .from('public_ranking_score_events')
-        .select('tribe_id, points')
+        .from('public_ranking_competition_score_events')
+        .select('competition_team_id, points')
         .eq('camp_id', campData.id)
 
       const { data: participantsData, error: participantsError } =
         await supabase
-          .from('public_ranking_participants')
-          .select('tribe_id, is_active')
+          .from('public_ranking_competition_participants')
+          .select('competition_team_id, is_active')
           .eq('camp_id', campData.id)
           .eq('is_active', true)
 
-      if (tribesError || eventsError || participantsError) {
-        console.error(tribesError || eventsError || participantsError)
+      if (teamsError || eventsError || participantsError) {
+        console.error(teamsError || eventsError || participantsError)
         setNotFound(true)
         setLoading(false)
         return
@@ -74,10 +74,14 @@ export default function PublicCampRanking() {
       setCamp(campData)
       setRanking(
         calculateRanking(
-          tribesData || [],
+          teamsData || [],
           eventsData || [],
           participantsData || [],
-          { includeInactive: false },
+          {
+            includeInactive: false,
+            scoreTeamIdField: 'competition_team_id',
+            participantTeamIdField: 'competition_team_id',
+          },
         ),
       )
       setLoading(false)
@@ -114,7 +118,7 @@ export default function PublicCampRanking() {
               </div>
             ) : (
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-zinc-400 md:text-base">
-                Ranking público das equipes do acampamento.
+                Ranking público dos times do acampamento.
               </p>
             )}
           </div>
@@ -159,10 +163,10 @@ export default function PublicCampRanking() {
           </div>
         ) : ranking.length === 0 ? (
           <div className="mt-10 rounded-3xl border border-zinc-800 bg-zinc-900 p-8 text-center">
-            <h2 className="text-2xl font-bold">Nenhuma equipe ativa ainda</h2>
+            <h2 className="text-2xl font-bold">Nenhum time ativo ainda</h2>
 
             <p className="mt-3 text-zinc-400">
-              Uma equipe aparece no ranking quando possuir pelo menos um
+              Um time aparece no ranking quando possuir pelo menos um
               participante ativo.
             </p>
           </div>
@@ -219,7 +223,7 @@ export default function PublicCampRanking() {
                 <thead className="bg-zinc-950">
                   <tr className="text-left text-sm">
                     <th className="px-6 py-5">Posição</th>
-                    <th className="px-6 py-5">Equipe</th>
+                    <th className="px-6 py-5">Time</th>
                     <th className="px-6 py-5">Integrantes</th>
                     <th className="px-6 py-5">Pontos +</th>
                     <th className="px-6 py-5">Penalidades</th>

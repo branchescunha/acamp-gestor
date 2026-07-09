@@ -29,6 +29,18 @@ test('groupScoresByTeam groups scores without mutating the source array', () => 
   assert.deepEqual(scores, snapshot)
 })
 
+test('groupScoresByTeam supports a custom team id field', () => {
+  const scores = [
+    { id: 1, competition_team_id: 'alpha', points: 10 },
+    { id: 2, competition_team_id: 'beta', points: 5 },
+  ]
+
+  const grouped = groupScoresByTeam(scores, 'competition_team_id')
+
+  assert.deepEqual(grouped.get('alpha'), [scores[0]])
+  assert.deepEqual(grouped.get('beta'), [scores[1]])
+})
+
 test('groupActiveParticipantsByTeam ignores inactive participants', () => {
   const participants = [
     { id: 1, tribe_id: 'alpha', is_active: true },
@@ -40,6 +52,21 @@ test('groupActiveParticipantsByTeam ignores inactive participants', () => {
 
   assert.deepEqual(grouped.get('alpha'), [participants[0]])
   assert.deepEqual(grouped.get('beta'), [participants[2]])
+})
+
+test('groupActiveParticipantsByTeam supports a custom team id field', () => {
+  const participants = [
+    { id: 1, competition_team_id: 'alpha', is_active: true },
+    { id: 2, competition_team_id: 'beta', is_active: false },
+  ]
+
+  const grouped = groupActiveParticipantsByTeam(
+    participants,
+    'competition_team_id'
+  )
+
+  assert.deepEqual(grouped.get('alpha'), [participants[0]])
+  assert.equal(grouped.has('beta'), false)
 })
 
 test('calculateTeamStanding combines score totals and active participant count', () => {
@@ -141,6 +168,61 @@ test('calculateRanking uses the sign of points when type contradicts it', () => 
   assert.equal(ranking[0].total, 10)
   assert.equal(ranking[1].id, 'beta')
   assert.equal(ranking[1].total, -10)
+})
+
+test('calculateRanking can use competition team fields explicitly', () => {
+  const scores = [
+    { competition_team_id: 'alpha', points: 10 },
+    { competition_team_id: 'beta', points: -2 },
+  ]
+  const participants = [
+    { id: 1, competition_team_id: 'alpha', is_active: true },
+    { id: 2, competition_team_id: 'beta', is_active: true },
+  ]
+
+  const ranking = calculateRanking(teams, scores, participants, {
+    scoreTeamIdField: 'competition_team_id',
+    participantTeamIdField: 'competition_team_id',
+  })
+
+  assert.equal(ranking[0].id, 'alpha')
+  assert.equal(ranking[0].total, 10)
+  assert.equal(ranking[0].participantsCount, 1)
+  assert.equal(ranking[1].id, 'beta')
+  assert.equal(ranking[1].total, -2)
+  assert.equal(ranking[1].participantsCount, 1)
+})
+
+test('calculateRanking does not fall back to tribe_id when competition team fields are requested', () => {
+  const scores = [
+    { tribe_id: 'alpha', competition_team_id: null, points: 50 },
+    { competition_team_id: 'beta', points: 10 },
+  ]
+  const participants = [
+    {
+      id: 1,
+      tribe_id: 'alpha',
+      competition_team_id: null,
+      is_active: true,
+    },
+    { id: 2, competition_team_id: 'beta', is_active: true },
+  ]
+
+  const ranking = calculateRanking(teams, scores, participants, {
+    includeInactive: true,
+    scoreTeamIdField: 'competition_team_id',
+    participantTeamIdField: 'competition_team_id',
+  })
+
+  const alpha = ranking.find((team) => team.id === 'alpha')
+  const beta = ranking.find((team) => team.id === 'beta')
+
+  assert.equal(alpha.total, 0)
+  assert.equal(alpha.isActive, false)
+  assert.equal(alpha.participantsCount, 0)
+  assert.equal(beta.total, 10)
+  assert.equal(beta.isActive, true)
+  assert.equal(beta.participantsCount, 1)
 })
 
 test('calculateRanking does not mutate source arrays', () => {
