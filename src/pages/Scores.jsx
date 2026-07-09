@@ -12,6 +12,7 @@ import { supabase } from '../lib/supabase'
 
 const initialForm = {
   tribe_id: '',
+  competition_team_id: '',
   participant_id: '',
   type: 'POINT',
   category: '',
@@ -22,6 +23,7 @@ const initialForm = {
 
 const initialFilters = {
   search: '',
+  competition_team_id: '',
   tribe_id: '',
   participant_id: '',
   type: '',
@@ -30,6 +32,7 @@ const initialFilters = {
 
 export default function Scores() {
   const [tribes, setTribes] = useState([])
+  const [competitionTeams, setCompetitionTeams] = useState([])
   const [participants, setParticipants] = useState([])
   const [events, setEvents] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -49,6 +52,14 @@ export default function Scores() {
         .eq('camp_id', activeCampId)
         .order('name')
 
+      const { data: competitionTeamsData, error: competitionTeamsError } =
+        await supabase
+          .from('competition_teams')
+          .select('*')
+          .eq('camp_id', activeCampId)
+          .order('status', { ascending: true })
+          .order('name', { ascending: true })
+
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
@@ -67,6 +78,12 @@ export default function Scores() {
             color,
             symbol
           ),
+          competition_teams (
+            name,
+            color,
+            symbol,
+            status
+          ),
           participants (
             full_name
           )
@@ -75,13 +92,24 @@ export default function Scores() {
         .eq('camp_id', activeCampId)
         .order('created_at', { ascending: false })
 
-      if (tribesError || participantsError || eventsError) {
-        console.error(tribesError || participantsError || eventsError)
+      if (
+        tribesError ||
+        competitionTeamsError ||
+        participantsError ||
+        eventsError
+      ) {
+        console.error(
+          tribesError ||
+            competitionTeamsError ||
+            participantsError ||
+            eventsError
+        )
         setLoading(false)
         return
       }
 
       setTribes(tribesData || [])
+      setCompetitionTeams(competitionTeamsData || [])
       setParticipants(participantsData || [])
       setEvents(eventsData || [])
       setLoading(false)
@@ -94,9 +122,22 @@ export default function Scores() {
 
     const timeoutId = window.setTimeout(() => {
       setTribes([])
+      setCompetitionTeams([])
       setParticipants([])
       setEvents([])
       setLoading(false)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [activeCampId])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setForm(initialForm)
+      setFilters(initialFilters)
+      setEditingId(null)
     }, 0)
 
     return () => {
@@ -114,6 +155,12 @@ export default function Scores() {
           name,
           color,
           symbol
+        ),
+        competition_teams (
+          name,
+          color,
+          symbol,
+          status
         ),
         participants (
           full_name
@@ -149,11 +196,21 @@ export default function Scores() {
     setForm((currentForm) => ({
       ...currentForm,
       participant_id: participantId,
-      tribe_id: selectedParticipant?.tribe_id || currentForm.tribe_id,
+      competition_team_id:
+        selectedParticipant?.competition_team_id ||
+        currentForm.competition_team_id,
     }))
   }
 
-  function handleTribeChange(event) {
+  function handleCompetitionTeamChange(event) {
+    setForm((currentForm) => ({
+      ...currentForm,
+      competition_team_id: event.target.value,
+      participant_id: '',
+    }))
+  }
+
+  function handleLegacyTribeChange(event) {
     setForm((currentForm) => ({
       ...currentForm,
       tribe_id: event.target.value,
@@ -179,6 +236,7 @@ export default function Scores() {
 
     setForm({
       tribe_id: eventItem.tribe_id || '',
+      competition_team_id: eventItem.competition_team_id || '',
       participant_id: eventItem.participant_id || '',
       type: eventItem.type,
       category: eventItem.category || '',
@@ -227,8 +285,12 @@ export default function Scores() {
       return
     }
 
-    if (!form.tribe_id) {
-      alert('Selecione uma equipe ou um participante.')
+    const isLegacyEditing = Boolean(
+      editingId && form.tribe_id && !form.competition_team_id
+    )
+
+    if (!isLegacyEditing && !form.competition_team_id) {
+      alert('Selecione um Time.')
       return
     }
 
@@ -245,7 +307,8 @@ export default function Scores() {
     setSaving(true)
 
     const payload = {
-      tribe_id: form.tribe_id,
+      tribe_id: isLegacyEditing ? form.tribe_id : null,
+      competition_team_id: isLegacyEditing ? null : form.competition_team_id,
       participant_id: form.participant_id || null,
       type: form.type,
       category: form.category,
@@ -267,7 +330,15 @@ export default function Scores() {
 
     if (error) {
       console.error(error)
-      alert('Erro ao salvar lançamento.')
+      const message =
+        `${error.message || ''} ${error.details || ''}`.toLowerCase()
+      alert(
+        error.code === '23503' ||
+          error.code === '23514' ||
+          message.includes('foreign key')
+          ? 'O Time selecionado não pertence a este acampamento.'
+          : 'Erro ao salvar lançamento.'
+      )
       setSaving(false)
       return
     }
@@ -278,11 +349,42 @@ export default function Scores() {
     setSaving(false)
   }
 
-  const formParticipants = form.tribe_id
-    ? participants.filter(
-        (participant) => participant.tribe_id === form.tribe_id
-      )
-    : participants
+  const activeCompetitionTeams = useMemo(() => {
+    return competitionTeams.filter((team) => team.status === 'active')
+  }, [competitionTeams])
+
+  const formCompetitionTeams = useMemo(() => {
+    if (!form.competition_team_id) return activeCompetitionTeams
+
+    const selectedTeam = competitionTeams.find(
+      (team) => team.id === form.competition_team_id
+    )
+
+    if (!selectedTeam || selectedTeam.status === 'active') {
+      return activeCompetitionTeams
+    }
+
+    return [...activeCompetitionTeams, selectedTeam].sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR')
+    )
+  }, [activeCompetitionTeams, competitionTeams, form.competition_team_id])
+
+  const isLegacyEditing = Boolean(
+    editingId && form.tribe_id && !form.competition_team_id
+  )
+
+  const formParticipants = isLegacyEditing
+    ? form.tribe_id
+      ? participants.filter(
+          (participant) => participant.tribe_id === form.tribe_id
+        )
+      : participants
+    : form.competition_team_id
+      ? participants.filter(
+          (participant) =>
+            participant.competition_team_id === form.competition_team_id
+        )
+      : participants
 
   const filterParticipants = filters.tribe_id
     ? participants.filter(
@@ -304,8 +406,13 @@ export default function Scores() {
         ? eventItem.reason?.toLowerCase().includes(search) ||
           eventItem.notes?.toLowerCase().includes(search) ||
           eventItem.category?.toLowerCase().includes(search) ||
+          eventItem.competition_teams?.name?.toLowerCase().includes(search) ||
           eventItem.tribes?.name?.toLowerCase().includes(search) ||
           eventItem.participants?.full_name?.toLowerCase().includes(search)
+        : true
+
+      const matchesCompetitionTeam = filters.competition_team_id
+        ? eventItem.competition_team_id === filters.competition_team_id
         : true
 
       const matchesTribe = filters.tribe_id
@@ -324,6 +431,7 @@ export default function Scores() {
 
       return (
         matchesSearch &&
+        matchesCompetitionTeam &&
         matchesTribe &&
         matchesParticipant &&
         matchesType &&
@@ -334,26 +442,42 @@ export default function Scores() {
 
   const columns = [
     {
-      key: 'tribe',
-      label: 'Equipe',
-      render: (eventItem) => (
-        <div className="flex items-center justify-end gap-3 md:justify-start">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
-            style={{ backgroundColor: eventItem.tribes?.color }}
-          >
-            {eventItem.tribes?.symbol}
+      key: 'target',
+      label: 'Destino',
+      render: (eventItem) =>
+        eventItem.competition_teams ? (
+          <div className="flex items-center justify-end gap-3 md:justify-start">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
+              style={{ backgroundColor: eventItem.competition_teams.color }}
+            >
+              {eventItem.competition_teams.symbol}
+            </div>
+            <span>Time: {eventItem.competition_teams.name}</span>
           </div>
-          <span>{eventItem.tribes?.name}</span>
-        </div>
-      ),
+        ) : eventItem.tribes ? (
+          <div className="flex items-center justify-end gap-3 md:justify-start">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
+              style={{ backgroundColor: eventItem.tribes.color }}
+            >
+              {eventItem.tribes.symbol}
+            </div>
+            <span>Equipe/Quarto: {eventItem.tribes.name}</span>
+          </div>
+        ) : (
+          <span className="text-zinc-500">Sem destino</span>
+        ),
     },
     {
       key: 'participant',
       label: 'Participante',
       render: (eventItem) => (
         <span className="text-zinc-400">
-          {eventItem.participants?.full_name || 'Equipe inteira'}
+          {eventItem.participants?.full_name ||
+            (eventItem.competition_team_id
+              ? 'Time inteiro'
+              : 'Equipe/Quarto inteiro')}
         </span>
       ),
     },
@@ -409,7 +533,7 @@ export default function Scores() {
       <PageHeader
         eyebrow="Pontuação"
         title="Lançar Pontos"
-        description="Registro de pontos, penalidades e histórico das equipes."
+        description="Registro manual de pontos e penalidades dos Times competitivos."
       />
 
       {!activeCampId && (
@@ -426,20 +550,44 @@ export default function Scores() {
           {editingId ? 'Editar lançamento' : 'Novo lançamento'}
         </h2>
 
+        {!editingId && activeCompetitionTeams.length === 0 && (
+          <p className="mt-4 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
+            Cadastre pelo menos um Time ativo antes de lançar pontuações
+            competitivas.
+          </p>
+        )}
+
         <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <select
-            name="tribe_id"
-            value={form.tribe_id}
-            onChange={handleTribeChange}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
-          >
-            <option value="">Selecione a equipe</option>
-            {tribes.map((tribe) => (
-              <option key={tribe.id} value={tribe.id}>
-                {tribe.name}
-              </option>
-            ))}
-          </select>
+          {isLegacyEditing ? (
+            <select
+              name="tribe_id"
+              value={form.tribe_id}
+              onChange={handleLegacyTribeChange}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            >
+              <option value="">Selecione a Equipe/Quarto</option>
+              {tribes.map((tribe) => (
+                <option key={tribe.id} value={tribe.id}>
+                  {tribe.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              name="competition_team_id"
+              value={form.competition_team_id}
+              onChange={handleCompetitionTeamChange}
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            >
+              <option value="">Selecione o Time</option>
+              {formCompetitionTeams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                  {team.status === 'inactive' ? ' (inativo)' : ''}
+                </option>
+              ))}
+            </select>
+          )}
 
           <select
             name="participant_id"
@@ -447,7 +595,11 @@ export default function Scores() {
             onChange={handleParticipantChange}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Equipe inteira / participante</option>
+            <option value="">
+              {isLegacyEditing
+                ? 'Equipe/Quarto inteiro / participante'
+                : 'Time inteiro / participante'}
+            </option>
             {formParticipants.map((participant) => (
               <option key={participant.id} value={participant.id}>
                 {participant.full_name}
@@ -535,7 +687,11 @@ export default function Scores() {
 
           <button
             type="submit"
-            disabled={saving || !activeCampId}
+            disabled={
+              saving ||
+              !activeCampId ||
+              (!editingId && activeCompetitionTeams.length === 0)
+            }
             className="rounded-xl bg-yellow-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving
@@ -571,9 +727,23 @@ export default function Scores() {
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="Buscar por motivo, equipe ou participante"
+            placeholder="Buscar por motivo, Time, Equipe/Quarto ou participante"
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500 xl:col-span-2"
           />
+
+          <select
+            name="competition_team_id"
+            value={filters.competition_team_id}
+            onChange={handleFilterChange}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+          >
+            <option value="">Todos os Times</option>
+            {activeCompetitionTeams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
 
           <select
             name="tribe_id"
@@ -587,7 +757,7 @@ export default function Scores() {
             }
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Todas as equipes</option>
+            <option value="">Todas as Equipes/Quartos</option>
             {tribes.map((tribe) => (
               <option key={tribe.id} value={tribe.id}>
                 {tribe.name}
