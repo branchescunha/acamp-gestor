@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase'
 
 const initialFilters = {
   search: '',
+  competition_team_id: '',
   tribe_id: '',
   participant_id: '',
   type: '',
@@ -17,12 +18,15 @@ const initialFilters = {
 export default function History() {
   const [events, setEvents] = useState([])
   const [tribes, setTribes] = useState([])
+  const [competitionTeams, setCompetitionTeams] = useState([])
   const [participants, setParticipants] = useState([])
   const [filters, setFilters] = useState(initialFilters)
   const [loading, setLoading] = useState(true)
   const { activeCampId } = useActiveCamp()
 
   useEffect(() => {
+    let shouldIgnore = false
+
     async function loadData() {
       setLoading(true)
 
@@ -35,6 +39,12 @@ export default function History() {
             name,
             color,
             symbol
+          ),
+          competition_teams (
+            name,
+            color,
+            symbol,
+            status
           ),
           participants (
             full_name
@@ -50,6 +60,14 @@ export default function History() {
         .eq('camp_id', activeCampId)
         .order('name')
 
+      const { data: competitionTeamsData, error: competitionTeamsError } =
+        await supabase
+          .from('competition_teams')
+          .select('*')
+          .eq('camp_id', activeCampId)
+          .order('status', { ascending: true })
+          .order('name', { ascending: true })
+
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
@@ -57,28 +75,56 @@ export default function History() {
           .eq('camp_id', activeCampId)
           .order('full_name')
 
-      if (eventsError || tribesError || participantsError) {
-        console.error(eventsError || tribesError || participantsError)
+      if (
+        eventsError ||
+        tribesError ||
+        competitionTeamsError ||
+        participantsError
+      ) {
+        console.error(
+          eventsError ||
+            tribesError ||
+            competitionTeamsError ||
+            participantsError
+        )
+        if (shouldIgnore) return
         setLoading(false)
         return
       }
 
+      if (shouldIgnore) return
+
       setEvents(eventsData || [])
       setTribes(tribesData || [])
+      setCompetitionTeams(competitionTeamsData || [])
       setParticipants(participantsData || [])
       setLoading(false)
     }
 
     if (activeCampId) {
       loadData()
-      return
+      return () => {
+        shouldIgnore = true
+      }
     }
 
     const timeoutId = window.setTimeout(() => {
       setEvents([])
       setTribes([])
+      setCompetitionTeams([])
       setParticipants([])
+      setFilters(initialFilters)
       setLoading(false)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [activeCampId])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setFilters(initialFilters)
     }, 0)
 
     return () => {
@@ -103,11 +149,56 @@ export default function History() {
     return new Date(value).toLocaleString('pt-BR')
   }
 
-  const filteredParticipants = filters.tribe_id
+  function getEventDestination(eventItem) {
+    if (eventItem.competition_team_id || eventItem.competition_teams) {
+      return {
+        label: eventItem.competition_teams?.name || 'Time não encontrado',
+        prefix: 'Time',
+        color: eventItem.competition_teams?.color,
+        symbol: eventItem.competition_teams?.symbol,
+      }
+    }
+
+    if (eventItem.tribe_id || eventItem.tribes) {
+      return {
+        label: eventItem.tribes?.name || 'Equipe/Quarto não encontrada',
+        prefix: 'Equipe/Quarto',
+        color: eventItem.tribes?.color,
+        symbol: eventItem.tribes?.symbol,
+      }
+    }
+
+    return {
+      label: 'Sem destino',
+      prefix: '',
+      color: '',
+      symbol: '',
+    }
+  }
+
+  function getEventParticipantLabel(eventItem) {
+    if (eventItem.participants?.full_name) return eventItem.participants.full_name
+    if (eventItem.competition_team_id) return 'Time inteiro'
+    if (eventItem.tribe_id) return 'Equipe/Quarto inteiro'
+    return 'Sem participante'
+  }
+
+  const filteredParticipants = filters.competition_team_id
     ? participants.filter(
-        (participant) => participant.tribe_id === filters.tribe_id
+        (participant) =>
+          participant.competition_team_id === filters.competition_team_id
       )
-    : participants
+    : filters.tribe_id
+      ? participants.filter(
+          (participant) => participant.tribe_id === filters.tribe_id
+        )
+      : participants
+
+  const effectiveParticipantId = filteredParticipants.some(
+    (participant) => participant.id === filters.participant_id
+  )
+    ? filters.participant_id
+    : ''
 
   const filterCategories = useMemo(() => {
     return getScoreCategories(filters.type)
@@ -121,16 +212,21 @@ export default function History() {
         ? eventItem.reason?.toLowerCase().includes(search) ||
           eventItem.notes?.toLowerCase().includes(search) ||
           eventItem.category?.toLowerCase().includes(search) ||
+          eventItem.competition_teams?.name?.toLowerCase().includes(search) ||
           eventItem.tribes?.name?.toLowerCase().includes(search) ||
           eventItem.participants?.full_name?.toLowerCase().includes(search)
+        : true
+
+      const matchesCompetitionTeam = filters.competition_team_id
+        ? eventItem.competition_team_id === filters.competition_team_id
         : true
 
       const matchesTribe = filters.tribe_id
         ? eventItem.tribe_id === filters.tribe_id
         : true
 
-      const matchesParticipant = filters.participant_id
-        ? eventItem.participant_id === filters.participant_id
+      const matchesParticipant = effectiveParticipantId
+        ? eventItem.participant_id === effectiveParticipantId
         : true
 
       const matchesType = filters.type ? eventItem.type === filters.type : true
@@ -141,13 +237,14 @@ export default function History() {
 
       return (
         matchesSearch &&
+        matchesCompetitionTeam &&
         matchesTribe &&
         matchesParticipant &&
         matchesType &&
         matchesCategory
       )
     })
-  }, [events, filters])
+  }, [effectiveParticipantId, events, filters])
 
   const columns = [
     {
@@ -160,28 +257,35 @@ export default function History() {
       ),
     },
     {
-      key: 'tribe',
-      label: 'Equipe',
-      render: (eventItem) => (
-        <div className="flex items-center justify-end gap-3 md:justify-start">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
-            style={{ backgroundColor: eventItem.tribes?.color }}
-          >
-            {eventItem.tribes?.symbol}
-          </div>
+      key: 'destination',
+      label: 'Destino',
+      render: (eventItem) => {
+        const destination = getEventDestination(eventItem)
 
-          <span>{eventItem.tribes?.name || 'Sem equipe'}</span>
-        </div>
-      ),
+        return (
+          <div className="flex items-center justify-end gap-3 md:justify-start">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
+              style={{ backgroundColor: destination.color }}
+            >
+              {destination.symbol}
+            </div>
+
+            <div>
+              <span>{destination.label}</span>
+              {destination.prefix && (
+                <p className="text-xs text-zinc-500">{destination.prefix}</p>
+              )}
+            </div>
+          </div>
+        )
+      },
     },
     {
       key: 'participant',
       label: 'Participante',
       render: (eventItem) => (
-        <span className="text-zinc-400">
-          {eventItem.participants?.full_name || 'Equipe inteira'}
-        </span>
+        <span className="text-zinc-400">{getEventParticipantLabel(eventItem)}</span>
       ),
     },
     {
@@ -257,9 +361,31 @@ export default function History() {
             name="search"
             value={filters.search}
             onChange={handleFilterChange}
-            placeholder="Buscar por motivo, equipe ou participante"
+            placeholder="Buscar por motivo, Time, Equipe/Quarto ou participante"
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500 xl:col-span-2"
           />
+
+          <select
+            name="competition_team_id"
+            value={filters.competition_team_id}
+            onChange={(event) =>
+              setFilters((currentFilters) => ({
+                ...currentFilters,
+                competition_team_id: event.target.value,
+                tribe_id: '',
+                participant_id: '',
+              }))
+            }
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+          >
+            <option value="">Todos os Times</option>
+
+            {competitionTeams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </select>
 
           <select
             name="tribe_id"
@@ -267,13 +393,14 @@ export default function History() {
             onChange={(event) =>
               setFilters((currentFilters) => ({
                 ...currentFilters,
+                competition_team_id: '',
                 tribe_id: event.target.value,
                 participant_id: '',
               }))
             }
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Todas as equipes</option>
+            <option value="">Todas as Equipes/Quartos</option>
 
             {tribes.map((tribe) => (
               <option key={tribe.id} value={tribe.id}>
@@ -284,7 +411,7 @@ export default function History() {
 
           <select
             name="participant_id"
-            value={filters.participant_id}
+            value={effectiveParticipantId}
             onChange={handleFilterChange}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
