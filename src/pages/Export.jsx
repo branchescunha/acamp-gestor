@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import ExcelJS from 'exceljs'
-import { saveAs } from 'file-saver'
 import PageHeader from '../components/PageHeader'
 import { calculateRanking } from '../domain/ranking'
 import { summarizeScores } from '../domain/scoring'
@@ -105,6 +103,18 @@ export default function Export() {
     return `acampgestor-backup-${campSlugOrId}-${new Date()
       .toISOString()
       .slice(0, 10)}.xlsx`
+  }
+
+  function sanitizeExcelText(value) {
+    if (typeof value !== 'string') return value
+    if (!/^\s*[=+\-@]/.test(value)) return value
+    return `'${value}`
+  }
+
+  function sanitizeExcelRow(row) {
+    return Object.fromEntries(
+      Object.entries(row).map(([key, value]) => [key, sanitizeExcelText(value)])
+    )
   }
 
   function getLegacyGymkhanaTeamName(team, settings, tribes = []) {
@@ -282,7 +292,7 @@ export default function Export() {
       width: column.width || 20,
     }))
 
-    rows.forEach((row) => worksheet.addRow(row))
+    rows.forEach((row) => worksheet.addRow(sanitizeExcelRow(row)))
 
     styleWorksheet(worksheet)
 
@@ -298,6 +308,15 @@ export default function Export() {
     setLoading(true)
 
     try {
+      const [{ default: ExcelJS }, fileSaverModule] = await Promise.all([
+        import('exceljs'),
+        import('file-saver'),
+      ])
+      const saveAsFile =
+        fileSaverModule.saveAs ||
+        fileSaverModule.default?.saveAs ||
+        fileSaverModule.default
+
       const exportCampId = selectedCamp.id
       const { data: tribesData, error: tribesError } = await supabase
         .from('tribes')
@@ -939,7 +958,7 @@ export default function Export() {
 
       const buffer = await workbook.xlsx.writeBuffer()
 
-      saveAs(new Blob([buffer]), getExportFileName(selectedCamp))
+      saveAsFile(new Blob([buffer]), getExportFileName(selectedCamp))
     } catch (error) {
       console.error(error)
       alert(`Erro ao exportar relatório: ${error.message}`)
