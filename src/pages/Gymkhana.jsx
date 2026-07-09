@@ -7,7 +7,7 @@ import { supabase } from '../lib/supabase'
 
 const initialForm = {
   title: '',
-  winning_team: '',
+  winning_competition_team_id: '',
   points_per_member: '',
   notes: '',
 }
@@ -18,7 +18,8 @@ const legacySettings = {
 }
 
 export default function Gymkhana() {
-  const [tribes, setTribes] = useState([])
+  const [competitionTeams, setCompetitionTeams] = useState([])
+  const [legacyTribes, setLegacyTribes] = useState([])
   const [participants, setParticipants] = useState([])
   const [history, setHistory] = useState([])
   const [settings, setSettings] = useState(legacySettings)
@@ -32,7 +33,8 @@ export default function Gymkhana() {
     setLoading(true)
 
     if (!activeCampId) {
-      setTribes([])
+      setCompetitionTeams([])
+      setLegacyTribes([])
       setParticipants([])
       setHistory([])
       setSettings(legacySettings)
@@ -40,9 +42,17 @@ export default function Gymkhana() {
       return
     }
 
-    const { data: tribesData, error: tribesError } = await supabase
+    const { data: competitionTeamsData, error: competitionTeamsError } =
+      await supabase
+        .from('competition_teams')
+        .select('id, name, color, symbol, leader_name, status, camp_id')
+        .eq('camp_id', activeCampId)
+        .eq('status', 'active')
+        .order('name')
+
+    const { data: legacyTribesData, error: legacyTribesError } = await supabase
       .from('tribes')
-      .select('*')
+      .select('id, name, color, symbol')
       .eq('camp_id', activeCampId)
       .order('name')
 
@@ -50,12 +60,10 @@ export default function Gymkhana() {
       .from('participants')
       .select(
         `
-        *,
-        tribes (
-          name,
-          color,
-          symbol
-        )
+        id,
+        full_name,
+        competition_team_id,
+        is_active
       `
       )
       .eq('camp_id', activeCampId)
@@ -74,9 +82,19 @@ export default function Gymkhana() {
       .eq('camp_id', activeCampId)
       .limit(1)
 
-    if (tribesError || participantsError || historyError || settingsError) {
+    if (
+      competitionTeamsError ||
+      legacyTribesError ||
+      participantsError ||
+      historyError ||
+      settingsError
+    ) {
       console.error(
-        tribesError || participantsError || historyError || settingsError
+        competitionTeamsError ||
+          legacyTribesError ||
+          participantsError ||
+          historyError ||
+          settingsError
       )
       setLoading(false)
       return
@@ -84,7 +102,8 @@ export default function Gymkhana() {
 
     const settingsData = settingsRows?.[0]
 
-    setTribes(tribesData || [])
+    setCompetitionTeams(competitionTeamsData || [])
+    setLegacyTribes(legacyTribesData || [])
     setParticipants(participantsData || [])
     setHistory(historyData || [])
     setSettings({
@@ -96,6 +115,8 @@ export default function Gymkhana() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
+      setForm(initialForm)
+      setEditingId(null)
       void loadData()
     }, 0)
 
@@ -104,29 +125,46 @@ export default function Gymkhana() {
     }
   }, [loadData])
 
-  const participantsByTribe = useMemo(() => {
+  const participantsByTeam = useMemo(() => {
     return participants.reduce((groups, participant) => {
-      const tribeId = participant.tribe_id
+      const teamId = participant.competition_team_id
 
-      if (!tribeId) return groups
+      if (!teamId) return groups
 
-      const currentParticipants = groups.get(tribeId) || []
-      groups.set(tribeId, [...currentParticipants, participant])
+      const currentParticipants = groups.get(teamId) || []
+      groups.set(teamId, [...currentParticipants, participant])
 
       return groups
     }, new Map())
   }, [participants])
 
   function getWinningTeamName(winningTeam) {
+    if (typeof winningTeam === 'object' && winningTeam !== null) {
+      if (winningTeam.winning_competition_team_id) {
+        return getWinningTeamName(winningTeam.winning_competition_team_id)
+      }
+
+      if (winningTeam.winning_team === 'A')
+        return `${settings.team_a_name} (legado)`
+      if (winningTeam.winning_team === 'B')
+        return `${settings.team_b_name} (legado)`
+
+      const legacyTribe = legacyTribes.find(
+        (item) => item.id === winningTeam.winning_team
+      )
+
+      return legacyTribe?.name || 'Time legado não encontrado'
+    }
+
     if (winningTeam === 'A') return `${settings.team_a_name} (legado)`
     if (winningTeam === 'B') return `${settings.team_b_name} (legado)`
 
-    const tribe = tribes.find((item) => item.id === winningTeam)
-    return tribe?.name || 'Equipe não encontrada'
+    const tribe = competitionTeams.find((item) => item.id === winningTeam)
+    return tribe?.name || 'Time não encontrado'
   }
 
   function getWinningTeam(winningTeam) {
-    return tribes.find((item) => item.id === winningTeam) || null
+    return competitionTeams.find((item) => item.id === winningTeam) || null
   }
 
   function handleChange(event) {
@@ -140,7 +178,8 @@ export default function Gymkhana() {
 
   async function createScoreEvent(gymkhanaEventId, points, winningTeamName) {
     const { error } = await supabase.from('score_events').insert({
-      tribe_id: form.winning_team,
+      tribe_id: null,
+      competition_team_id: form.winning_competition_team_id,
       participant_id: null,
       type: 'POINT',
       category: 'Gincana',
@@ -164,8 +203,8 @@ export default function Gymkhana() {
       return
     }
 
-    if (tribes.length < 2) {
-      alert('Cadastre pelo menos duas equipes para lançar resultados da gincana.')
+    if (competitionTeams.length < 2) {
+      alert('Cadastre pelo menos dois times para lançar resultados da gincana.')
       return
     }
 
@@ -174,15 +213,15 @@ export default function Gymkhana() {
       return
     }
 
-    if (!form.winning_team) {
-      alert('Selecione a equipe vencedora.')
+    if (!form.winning_competition_team_id) {
+      alert('Selecione o time vencedor.')
       return
     }
 
-    const winningTeam = getWinningTeam(form.winning_team)
+    const winningTeam = getWinningTeam(form.winning_competition_team_id)
 
     if (!winningTeam) {
-      alert('Selecione uma equipe vencedora válida.')
+      alert('Selecione um time vencedor válido.')
       return
     }
 
@@ -195,10 +234,14 @@ export default function Gymkhana() {
 
     try {
       const points = Number(form.points_per_member)
-      const winningTeamName = getWinningTeamName(form.winning_team)
+      const winningCompetitionTeamId = form.winning_competition_team_id
+      const winningTeamName = getWinningTeamName({
+        winning_competition_team_id: winningCompetitionTeamId,
+      })
       const eventPayload = {
         title: form.title.trim(),
-        winning_team: form.winning_team,
+        winning_team: winningCompetitionTeamId,
+        winning_competition_team_id: winningCompetitionTeamId,
         points_per_member: points,
         notes: form.notes.trim() || null,
         camp_id: activeCampId,
@@ -250,10 +293,8 @@ export default function Gymkhana() {
 
     setForm({
       title: eventItem.title || '',
-      winning_team:
-        eventItem.winning_team === 'A' || eventItem.winning_team === 'B'
-          ? ''
-          : eventItem.winning_team || '',
+      winning_competition_team_id:
+        eventItem.winning_competition_team_id || '',
       points_per_member: eventItem.points_per_member || '',
       notes: eventItem.notes || '',
     })
@@ -317,34 +358,36 @@ export default function Gymkhana() {
     void handleDelete(currentEvent)
   }
 
-  function renderTeamBadge(winningTeam) {
-    const tribe = getWinningTeam(winningTeam)
+  function renderTeamBadge(eventItem) {
+    const team =
+      getWinningTeam(eventItem.winning_competition_team_id) ||
+      legacyTribes.find((item) => item.id === eventItem.winning_team)
 
-    if (tribe) {
+    if (team) {
       return (
         <span className="inline-flex items-center gap-2 rounded-full border border-zinc-700 px-3 py-1 text-xs font-semibold text-zinc-200">
           <span
             className="h-3 w-3 rounded-full"
-            style={{ backgroundColor: tribe.color }}
+            style={{ backgroundColor: team.color }}
           />
-          {tribe.name}
+          {team.name}
         </span>
       )
     }
 
     return (
       <span className="rounded-full border border-zinc-700 bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-300">
-        {getWinningTeamName(winningTeam)}
+        {getWinningTeamName(eventItem)}
       </span>
     )
   }
 
-  function renderTeamCard(tribe) {
-    const members = participantsByTribe.get(tribe.id) || []
+  function renderTeamCard(team) {
+    const members = participantsByTeam.get(team.id) || []
 
     return (
       <article
-        key={tribe.id}
+        key={team.id}
         className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 md:p-6"
       >
         <div className="flex items-start justify-between gap-4">
@@ -352,13 +395,13 @@ export default function Gymkhana() {
             <div className="flex items-center gap-3">
               <div
                 className="flex h-12 w-12 items-center justify-center rounded-2xl text-xl"
-                style={{ backgroundColor: tribe.color }}
+                style={{ backgroundColor: team.color }}
               >
-                {tribe.symbol}
+                {team.symbol}
               </div>
 
               <div>
-                <h2 className="text-xl font-bold">{tribe.name}</h2>
+                <h2 className="text-xl font-bold">{team.name}</h2>
                 <p className="mt-1 text-sm text-zinc-400">
                   {members.length} participante(s) ativo(s)
                 </p>
@@ -367,10 +410,11 @@ export default function Gymkhana() {
           </div>
         </div>
 
-        <div className="mt-5 space-y-2 text-sm text-zinc-400">
-          <p>Responsável: {tribe.leader_name || 'Não definido'}</p>
-          <p>Quarto: {tribe.room_name || 'Opcional'}</p>
-        </div>
+        {team.leader_name && (
+          <p className="mt-5 text-sm text-zinc-400">
+            Responsável: {team.leader_name}
+          </p>
+        )}
       </article>
     )
   }
@@ -394,8 +438,8 @@ export default function Gymkhana() {
     },
     {
       key: 'team',
-      label: 'Equipe vencedora',
-      render: (eventItem) => renderTeamBadge(eventItem.winning_team),
+      label: 'Time vencedor',
+      render: (eventItem) => renderTeamBadge(eventItem),
     },
     {
       key: 'points',
@@ -428,14 +472,14 @@ export default function Gymkhana() {
     },
   ]
 
-  const hasEnoughTeams = tribes.length >= 2
+  const hasEnoughTeams = competitionTeams.length >= 2
 
   return (
     <section>
       <PageHeader
         eyebrow="Gincana"
         title="Gincana dinâmica"
-        description="Lance resultados usando as equipes reais cadastradas neste acampamento."
+        description="Lance resultados usando os times cadastrados neste acampamento."
       />
 
       {!activeCampId && (
@@ -444,20 +488,20 @@ export default function Gymkhana() {
         </div>
       )}
 
-      {activeCampId && tribes.length === 0 && (
+      {activeCampId && competitionTeams.length === 0 && (
         <p className="mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
-          Cadastre equipes antes de lançar resultados da gincana.
+          Cadastre times antes de lançar resultados da gincana.
         </p>
       )}
 
-      {activeCampId && tribes.length === 1 && (
+      {activeCampId && competitionTeams.length === 1 && (
         <p className="mb-6 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100">
-          Cadastre pelo menos mais uma equipe para disputar a gincana.
+          Cadastre pelo menos mais um time para disputar a gincana.
         </p>
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {tribes.map(renderTeamCard)}
+        {competitionTeams.map(renderTeamCard)}
       </div>
 
       <form
@@ -480,15 +524,15 @@ export default function Gymkhana() {
           />
 
           <select
-            name="winning_team"
-            value={form.winning_team}
+            name="winning_competition_team_id"
+            value={form.winning_competition_team_id}
             onChange={handleChange}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Equipe vencedora</option>
-            {tribes.map((tribe) => (
-              <option key={tribe.id} value={tribe.id}>
-                {tribe.name}
+            <option value="">Time vencedor</option>
+            {competitionTeams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
               </option>
             ))}
           </select>

@@ -1,8 +1,11 @@
 import { summarizeScores } from './scoring.js'
 
-export function groupScoresByTeam(scores = []) {
+export function groupScoresByTeam(scores = [], teamIdField = 'tribe_id') {
   return scores.reduce((groups, scoreEntry) => {
-    const teamId = scoreEntry.tribe_id
+    const teamId = scoreEntry[teamIdField]
+
+    if (!teamId) return groups
+
     const teamScores = groups.get(teamId) || []
 
     groups.set(teamId, [...teamScores, scoreEntry])
@@ -10,11 +13,17 @@ export function groupScoresByTeam(scores = []) {
   }, new Map())
 }
 
-export function groupActiveParticipantsByTeam(participants = []) {
+export function groupActiveParticipantsByTeam(
+  participants = [],
+  teamIdField = 'tribe_id'
+) {
   return participants.reduce((groups, participant) => {
     if (!participant.is_active) return groups
 
-    const teamId = participant.tribe_id
+    const teamId = participant[teamIdField]
+
+    if (!teamId) return groups
+
     const teamParticipants = groups.get(teamId) || []
 
     groups.set(teamId, [...teamParticipants, participant])
@@ -52,10 +61,17 @@ export function calculateRanking(
   teams = [],
   scores = [],
   participants = [],
-  { includeInactive = false } = {}
+  {
+    includeInactive = false,
+    scoreTeamIdField = 'tribe_id',
+    participantTeamIdField = 'tribe_id',
+  } = {}
 ) {
-  const scoresByTeam = groupScoresByTeam(scores)
-  const participantsByTeam = groupActiveParticipantsByTeam(participants)
+  const scoresByTeam = groupScoresByTeam(scores, scoreTeamIdField)
+  const participantsByTeam = groupActiveParticipantsByTeam(
+    participants,
+    participantTeamIdField
+  )
 
   return teams
     .map((team) =>
