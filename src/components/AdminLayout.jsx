@@ -11,6 +11,7 @@ import { useUserProfile } from '../hooks/useUserProfile'
 
 const adminOperationPaths = [
   '/admin/tribos',
+  '/admin/times',
   '/admin/participantes',
   '/admin/pontuacao',
   '/admin/historico',

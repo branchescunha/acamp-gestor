@@ -29,6 +29,7 @@ import Users from './pages/Users'
 import Invitations from './pages/Invitations'
 import Dashboard from './pages/Dashboard'
 import Tribes from './pages/Tribes'
+import CompetitionTeams from './pages/CompetitionTeams'
 import Participants from './pages/Participants'
 import Scores from './pages/Scores'
 import History from './pages/History'
@@ -129,6 +130,14 @@ export default function App() {
             }
           />
           <Route
+            path="times"
+            element={
+              <RequireActiveCamp>
+                <CompetitionTeams />
+              </RequireActiveCamp>
+            }
+          />
+          <Route
             path="participantes"
             element={
               <RequireActiveCamp>
@@ -184,6 +193,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="conta" element={<Account />} />
           <Route path="equipes" element={<Tribes />} />
+          <Route path="times" element={<CompetitionTeams />} />
           <Route path="participantes" element={<Participants />} />
           <Route path="pontuacao" element={<Scores />} />
           <Route path="historico" element={<History />} />

@@ -21,12 +21,14 @@ const initialForm = {
   notes: '',
   is_board_member: false,
   tribe_id: '',
+  competition_team_id: '',
   is_active: true,
 }
 
 const initialFilters = {
   search: '',
   tribe_id: '',
+  competition_team_id: '',
   group_type: '',
   gender: '',
   age: '',
@@ -38,6 +40,7 @@ const initialFilters = {
 export default function Participants() {
   const [participants, setParticipants] = useState([])
   const [tribes, setTribes] = useState([])
+  const [competitionTeams, setCompetitionTeams] = useState([])
   const [form, setForm] = useState(initialForm)
   const [filters, setFilters] = useState(initialFilters)
   const [editingId, setEditingId] = useState(null)
@@ -59,6 +62,12 @@ export default function Participants() {
               name,
               color,
               symbol
+            ),
+            competition_teams (
+              name,
+              color,
+              symbol,
+              status
             )
           `
           )
@@ -71,14 +80,25 @@ export default function Participants() {
         .eq('camp_id', activeCampId)
         .order('name')
 
-      if (participantsError || tribesError) {
-        console.error(participantsError || tribesError)
+      const { data: competitionTeamsData, error: competitionTeamsError } =
+        await supabase
+          .from('competition_teams')
+          .select('*')
+          .eq('camp_id', activeCampId)
+          .order('status', { ascending: true })
+          .order('name', { ascending: true })
+
+      if (participantsError || tribesError || competitionTeamsError) {
+        console.error(
+          participantsError || tribesError || competitionTeamsError
+        )
         setLoading(false)
         return
       }
 
       setParticipants(participantsData || [])
       setTribes(tribesData || [])
+      setCompetitionTeams(competitionTeamsData || [])
       setLoading(false)
     }
 
@@ -90,7 +110,20 @@ export default function Participants() {
     const timeoutId = window.setTimeout(() => {
       setParticipants([])
       setTribes([])
+      setCompetitionTeams([])
       setLoading(false)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [activeCampId])
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setForm(initialForm)
+      setFilters(initialFilters)
+      setEditingId(null)
     }, 0)
 
     return () => {
@@ -108,6 +141,12 @@ export default function Participants() {
           name,
           color,
           symbol
+        ),
+        competition_teams (
+          name,
+          color,
+          symbol,
+          status
         )
       `
       )
@@ -193,6 +232,7 @@ export default function Participants() {
       notes: participant.notes || '',
       is_board_member: participant.is_board_member || false,
       tribe_id: participant.tribe_id || '',
+      competition_team_id: participant.competition_team_id || '',
       is_active: participant.is_active,
     })
 
@@ -269,6 +309,7 @@ export default function Participants() {
       notes: form.notes.trim() || null,
       is_board_member: form.is_board_member,
       tribe_id: form.tribe_id || null,
+      competition_team_id: form.competition_team_id || null,
       is_active: form.is_active,
       camp_id: activeCampId,
     }
@@ -285,7 +326,15 @@ export default function Participants() {
 
     if (error) {
       console.error(error)
-      alert('Erro ao salvar participante.')
+      const message =
+        `${error.message || ''} ${error.details || ''}`.toLowerCase()
+      alert(
+        error.code === '23503' ||
+          error.code === '23514' ||
+          message.includes('foreign key')
+          ? 'O Time selecionado não pertence a este acampamento.'
+          : 'Erro ao salvar participante.'
+      )
       setSaving(false)
       return
     }
@@ -311,6 +360,13 @@ export default function Participants() {
       const matchesTribe = filters.tribe_id
         ? participant.tribe_id === filters.tribe_id
         : true
+
+      const matchesCompetitionTeam =
+        filters.competition_team_id === 'none'
+          ? !participant.competition_team_id
+          : filters.competition_team_id
+            ? participant.competition_team_id === filters.competition_team_id
+            : true
 
       const matchesGroup = filters.group_type
         ? participant.group_type === filters.group_type
@@ -339,6 +395,7 @@ export default function Participants() {
       return (
         matchesSearch &&
         matchesTribe &&
+        matchesCompetitionTeam &&
         matchesGroup &&
         matchesGender &&
         matchesAge &&
@@ -348,6 +405,26 @@ export default function Participants() {
       )
     })
   }, [participants, filters])
+
+  const activeCompetitionTeams = useMemo(() => {
+    return competitionTeams.filter((team) => team.status === 'active')
+  }, [competitionTeams])
+
+  const formCompetitionTeams = useMemo(() => {
+    if (!form.competition_team_id) return activeCompetitionTeams
+
+    const selectedTeam = competitionTeams.find(
+      (team) => team.id === form.competition_team_id
+    )
+
+    if (!selectedTeam || selectedTeam.status === 'active') {
+      return activeCompetitionTeams
+    }
+
+    return [...activeCompetitionTeams, selectedTeam].sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR')
+    )
+  }, [activeCompetitionTeams, competitionTeams, form.competition_team_id])
 
   function renderGenderBadge(gender) {
     const isMale = gender === 'Masculino'
@@ -394,7 +471,7 @@ export default function Participants() {
     },
     {
       key: 'tribe',
-      label: 'Equipe',
+      label: 'Equipe/Quarto',
       render: (participant) =>
         participant.tribes ? (
           <div className="flex items-center justify-end gap-3 md:justify-start">
@@ -408,7 +485,31 @@ export default function Participants() {
             <span>{participant.tribes.name}</span>
           </div>
         ) : (
-          <span className="text-zinc-500">Sem equipe</span>
+          <span className="text-zinc-500">Sem equipe/quarto</span>
+        ),
+    },
+    {
+      key: 'competition_team',
+      label: 'Time',
+      render: (participant) =>
+        participant.competition_teams ? (
+          <div className="flex items-center justify-end gap-3 md:justify-start">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-sm"
+              style={{ backgroundColor: participant.competition_teams.color }}
+            >
+              {participant.competition_teams.symbol}
+            </div>
+
+            <span>
+              {participant.competition_teams.name}
+              {participant.competition_teams.status === 'inactive' && (
+                <span className="ml-2 text-xs text-zinc-500">Inativo</span>
+              )}
+            </span>
+          </div>
+        ) : (
+          <span className="text-zinc-500">Sem time</span>
         ),
     },
     {
@@ -572,7 +673,7 @@ export default function Participants() {
             onChange={handleChange}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Sem equipe</option>
+            <option value="">Sem equipe/quarto</option>
 
             {tribes.map((tribe) => (
               <option key={tribe.id} value={tribe.id}>
@@ -583,7 +684,30 @@ export default function Participants() {
 
           {tribes.length === 0 && (
             <p className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100 md:col-span-2 xl:col-span-4">
-              Cadastre equipes antes de vincular participantes à competição.
+              Nenhuma Equipe/Quarto cadastrada. O participante pode ser salvo
+              sem esse vínculo.
+            </p>
+          )}
+
+          <select
+            name="competition_team_id"
+            value={form.competition_team_id}
+            onChange={handleChange}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+          >
+            <option value="">Sem time</option>
+
+            {formCompetitionTeams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+                {team.status === 'inactive' ? ' (inativo)' : ''}
+              </option>
+            ))}
+          </select>
+
+          {competitionTeams.length === 0 && (
+            <p className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-100 md:col-span-2 xl:col-span-4">
+              Nenhum Time cadastrado. O participante pode ser salvo sem Time.
             </p>
           )}
 
@@ -710,11 +834,27 @@ export default function Participants() {
             onChange={handleFilterChange}
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
-            <option value="">Todas as equipes</option>
+            <option value="">Todas as Equipes/Quartos</option>
 
             {tribes.map((tribe) => (
               <option key={tribe.id} value={tribe.id}>
                 {tribe.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            name="competition_team_id"
+            value={filters.competition_team_id}
+            onChange={handleFilterChange}
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+          >
+            <option value="">Todos os Times</option>
+            <option value="none">Sem time</option>
+
+            {activeCompetitionTeams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
               </option>
             ))}
           </select>
