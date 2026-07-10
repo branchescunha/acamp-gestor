@@ -1,84 +1,177 @@
 # AcampGestor
 
-Plataforma web para gestão de acampamentos, equipes, participantes, pontuação, gincanas, inspeções, exportações e ranking público.
+Plataforma web para gestão de acampamentos, retiros e eventos, com controle de organizações, acampamentos, Equipes/Quartos, Times competitivos, participantes, pontuações, gincanas, inspeções, ranking público e exportação em Excel.
 
-O AcampGestor foi desenvolvido como uma aplicação full stack para igrejas, escolas e organizações que precisam acompanhar eventos com equipes de forma organizada, visual e segura.
+O AcampGestor separa a administração da plataforma, a gestão operacional de cada acampamento e a visualização pública dos rankings. A aplicação foi estruturada para uso por igrejas, escolas e organizações que precisam organizar eventos com múltiplos responsáveis, dados isolados por acampamento e regras de acesso bem definidas.
 
 Produção: https://tribes-tournament.vercel.app
 
 ## Demonstração
 
-As telas principais incluem:
+A aplicação está disponível em produção para demonstração do fluxo público e das interfaces autenticadas conforme o perfil de acesso.
 
-- landing page pública;
-- dashboard administrativo geral;
-- gestão de organizações e membros;
-- gestão de acampamentos;
-- painel do gestor por URL do acampamento;
-- ranking público por slug.
+Principais fluxos disponíveis:
 
-Ainda não há prints versionados no repositório.
+- landing pública do produto;
+- solicitação pública de acesso;
+- painel ADMIN para gestão da plataforma;
+- painel GESTOR para operação dos acampamentos permitidos;
+- ranking público por slug do acampamento.
 
 ## Funcionalidades
 
-- Landing page pública do produto.
-- Solicitação controlada de acesso.
-- Aprovação automática de solicitações pelo ADMIN.
-- Autenticação com Supabase Auth.
-- Recuperação e redefinição de senha.
-- Dashboard geral para ADMIN.
-- Gestão de usuários e profiles.
-- Gestão de convites administrativos.
-- Aceite público de convite.
-- Gestão de organizações.
-- Gestão de membros por organização.
-- Gestão de acampamentos.
-- Painel do gestor por slug.
-- Cadastro e edição de equipes livres por acampamento.
-- Cadastro e filtragem de participantes vinculados a equipes reais.
-- Lançamento de pontos e penalidades.
-- Histórico de lançamentos.
-- Controle de gincanas com equipes cadastradas no acampamento.
-- Controle de inspeções de quartos.
-- Exportação de dados em Excel.
-- Ranking público por slug do acampamento.
-- Regras de acesso com ADMIN, GESTOR e ACAMPANTE.
-- Separação de dados operacionais por acampamento ativo.
+### Acesso e autenticação
 
-## Modelo Operacional
+- autenticação com Supabase Auth;
+- login por e-mail e senha;
+- recuperação e redefinição de senha;
+- página de conta do usuário;
+- profiles com roles `admin` e `gestor`;
+- status de acesso `active` e `suspended`.
 
-Equipes são grupos livres de competição dentro de um acampamento. Elas não são obrigatoriamente quartos.
+### Plataforma ADMIN
 
-Campos como tipo de quarto, número do quarto e responsável/líder continuam disponíveis como informações extras, mas não bloqueiam a criação da equipe.
+- dashboard administrativo geral;
+- revisão de solicitações de acesso;
+- aprovação automática de gestores;
+- gestão de usuários e profiles;
+- gestão de convites administrativos;
+- gestão de organizações;
+- gestão de membros por organização;
+- gestão de acampamentos;
+- acesso administrativo às operações de acampamento conforme permissões.
 
-Participantes podem ser vinculados a uma equipe real cadastrada no acampamento por meio da relação interna `tribe_id`. A equipe continua opcional para preservar cadastros em andamento.
+### Gestão do acampamento
 
-A gincana usa as equipes reais do acampamento. Novos resultados registram a equipe vencedora cadastrada, geram pontuação na categoria `Gincana` e alimentam o histórico/ranking pelo mesmo fluxo de pontuação das demais telas. Eventos antigos baseados em Equipe A/B são tratados como legado para consulta e exportação.
+- área Meus acampamentos para GESTOR;
+- painel por slug do acampamento;
+- cadastro de Equipes/Quartos;
+- cadastro de Times competitivos;
+- cadastro de participantes;
+- vínculo opcional de participante com Equipe/Quarto;
+- vínculo opcional de participante com Time competitivo;
+- lançamento de pontos e penalidades;
+- gincana por Times competitivos;
+- inspeções de quartos;
+- histórico de lançamentos;
+- dashboard competitivo;
+- exportação Excel por acampamento.
 
-A exportação operacional é sempre feita por acampamento. No painel ADMIN, o usuário escolhe um acampamento disponível ou usa o acampamento ativo como seleção inicial. No painel por slug, o GESTOR exporta somente o acampamento acessado pela URL atual. A versão atual não exporta todos os acampamentos nem múltiplos acampamentos ao mesmo tempo.
+### Público
 
-O arquivo exportado inclui dados do acampamento, ranking, equipes reais, participantes, pontuações, histórico, gincana dinâmica, inspeções e estatísticas por equipe.
+- landing pública;
+- solicitação de acesso;
+- aceite de convite;
+- ranking público por slug.
 
-## Fluxo de Acesso
+## Modelo de Domínio
 
-O fluxo principal de entrada de gestores começa em `/solicitar-acesso`.
+O modelo separa organização operacional de competição.
 
-Quando um ADMIN aprova uma solicitação em `/admin/solicitacoes`, a Edge Function `approve-access-request` executa o onboarding inicial no servidor:
+Equipe/Quarto representa alojamento, organização interna e referência operacional do acampamento. Time competitivo representa a disputa de pontos, ranking e gincanas.
 
-- valida se o usuário autenticado é ADMIN ativo;
+Exemplo:
+
+```text
+Participante: Maria
+Equipe/Quarto: Levi
+Time competitivo: Azul
+```
+
+Um participante pode possuir os dois vínculos, mas ambos são opcionais conforme o cadastro. Inspeções usam Equipes/Quartos. Pontuação competitiva, gincana e ranking atual usam Times competitivos.
+
+O projeto preserva compatibilidade com dados operacionais anteriores, mas o fluxo competitivo atual usa Times.
+
+## Perfis e Acesso
+
+### ACAMPANTE
+
+- não possui login;
+- acessa apenas o ranking público do acampamento em `/:campSlug`.
+
+### GESTOR
+
+- possui login;
+- acessa `/gestor`;
+- gerencia apenas os acampamentos permitidos;
+- opera o painel do acampamento em `/:campSlug/gestor/*`.
+
+### ADMIN
+
+- administra a plataforma em `/admin` e `/admin/*`;
+- gerencia solicitações, usuários, convites, organizações e acampamentos;
+- pode acessar operações administrativas de acampamento pela interface ADMIN.
+
+ADMIN e GESTOR usam painéis separados. O painel ADMIN é da plataforma; o painel GESTOR é do acampamento.
+
+## Aprovação de Acesso
+
+O fluxo principal começa em `/solicitar-acesso`.
+
+```text
+Solicitação pública
+-> solicitação pendente
+-> aprovação por ADMIN
+-> Edge Function approve-access-request
+-> criação do acesso inicial do gestor
+```
+
+A Edge Function executa operações privilegiadas no servidor usando credencial administrativa do Supabase disponível no runtime. O caller é validado por JWT, profile ADMIN e status ativo.
+
+Durante a aprovação, a função:
+
+- valida o usuário autenticado;
+- exige profile ADMIN ativo;
 - cria ou reutiliza o usuário no Supabase Auth;
-- cria ou atualiza o profile com role `gestor` e status `active`;
-- cria ou reutiliza a organização informada na solicitação;
-- vincula o gestor à organização como `owner`;
-- registra o onboarding em `invitations`, quando compatível com o schema;
+- cria ou atualiza o profile de GESTOR;
+- cria ou reutiliza a organização;
+- cria o vínculo inicial como owner;
+- registra onboarding/convite;
 - marca a solicitação como aprovada;
-- retorna um link de primeiro acesso para definição de senha, quando gerado com sucesso.
+- gera link de primeiro acesso quando possível.
 
-Convites administrativos continuam disponíveis como histórico, apoio ou fluxo manual secundário, mas não são mais etapa obrigatória para aprovar uma solicitação de acesso.
+## Ranking Público
 
-A tela pública de solicitação de acesso não aponta para um ranking genérico. Rankings públicos são acessados pelo slug real do acampamento, em `/:campSlug`.
+O ranking público fica disponível em `/:campSlug`, sem exigir login.
 
-ADMIN e GESTOR possuem conta e senha. Painéis administrativos e de gestão exigem login; a única tela operacional pública do acampamento é o ranking público em `/:campSlug`.
+Esse acesso depende de ranking público habilitado no acampamento e usa views públicas específicas para retornar somente os dados mínimos necessários. O ranking usa Times competitivos ativos e não expõe dados pessoais completos dos participantes.
+
+## Exportação
+
+A exportação é feita por acampamento.
+
+No painel ADMIN, a exportação usa um acampamento selecionado. No painel por slug, o GESTOR exporta somente o acampamento da URL atual.
+
+O Excel reflete o modelo final do produto, com dados de:
+
+- acampamento;
+- Times competitivos;
+- Equipes/Quartos;
+- participantes;
+- histórico;
+- pontos positivos;
+- penalidades;
+- gincana;
+- inspeções;
+- estatísticas por Time.
+
+Ranking e saldo competitivo usam Times. Inspeções permanecem ligadas a Equipes/Quartos.
+
+## Arquitetura e Segurança
+
+- autenticação com Supabase Auth;
+- profiles com roles e status;
+- Row Level Security no PostgreSQL;
+- autorização por funções SQL, incluindo controle por acampamento;
+- isolamento de dados operacionais por `camp_id`;
+- organizações e memberships;
+- painéis separados para ADMIN e GESTOR;
+- views públicas mínimas para ranking;
+- Edge Function para onboarding privilegiado;
+- validação explícita de variáveis públicas do Supabase no frontend;
+- exportação administrativa restrita a áreas autenticadas;
+- sanitização de textos antes da geração Excel para reduzir risco de formula injection;
+- headers básicos de segurança em produção.
 
 ## Tecnologias Utilizadas
 
@@ -94,80 +187,13 @@ ADMIN e GESTOR possuem conta e senha. Painéis administrativos e de gestão exig
 - Row Level Security
 - Lucide React
 - ExcelJS
-- `node:test`
-
-## Rotas Principais
-
-### Públicas
-
-- `/`: landing page pública.
-- `/login`: acesso ao painel administrativo.
-- `/solicitar-acesso`: solicitação controlada de acesso.
-- `/recuperar-senha`: solicitação de recuperação de senha.
-- `/redefinir-senha`: redefinição de senha.
-- `/convite/:token`: aceite público de convite administrativo.
-- `/:campSlug`: ranking público do acampamento.
-
-### Administração
-
-- `/admin`: dashboard geral da plataforma, exclusivo para ADMIN.
-- `/admin/*`: rotas administrativas exclusivas para ADMIN.
-- `/admin/solicitacoes`: revisão de solicitações de acesso.
-- `/admin/usuarios`: gestão de profiles.
-- `/admin/convites`: gestão de convites administrativos.
-- `/admin/organizacoes`: gestão de organizações.
-- `/admin/organizacoes/:organizationId/membros`: gestão de membros da organização.
-- `/admin/acampamentos`: gestão e seleção de acampamentos.
-- `/admin/conta`: configurações da conta.
-
-As rotas operacionais antigas em `/admin` dependem de um acampamento ativo selecionado em `/admin/acampamentos`:
-
-- `/admin/tribos`
-- `/admin/participantes`
-- `/admin/pontuacao`
-- `/admin/historico`
-- `/admin/gincana`
-- `/admin/inspecoes`
-- `/admin/exportacao`
-
-Sem acampamento ativo, essas telas orientam o ADMIN a selecionar um acampamento antes de gerenciar dados operacionais.
-
-### Painel do Gestor
-
-- `/gestor`: área inicial do GESTOR para escolher um acampamento permitido.
-- `/:campSlug/gestor`: dashboard do acampamento.
-- `/:campSlug/gestor/conta`: configurações da conta do gestor.
-- `/:campSlug/gestor/equipes`: gestão de equipes.
-- `/:campSlug/gestor/participantes`: gestão de participantes.
-- `/:campSlug/gestor/pontuacao`: lançamento de pontuação.
-- `/:campSlug/gestor/historico`: histórico de lançamentos.
-- `/:campSlug/gestor/gincana`: controle de gincanas.
-- `/:campSlug/gestor/inspecoes`: controle de inspeções.
-- `/:campSlug/gestor/exportacao`: exportação de dados.
-
-As rotas antigas em `/:campSlug/admin` continuam apenas como compatibilidade e redirecionam para `/:campSlug/gestor`.
-
-O painel por slug usa o acampamento da própria URL e não depende da seleção local de acampamento ativo. ADMIN executa operações pela interface `/admin`; GESTOR executa operações pela interface `/gestor` e `/:campSlug/gestor`. ADMIN não entra no painel do GESTOR, e GESTOR não entra no painel ADMIN. Não existe rota pública genérica `/ranking`; rankings públicos usam sempre `/:campSlug`.
-
-## Segurança e Permissões
-
-O AcampGestor trabalha com três perfis principais:
-
-- ACAMPANTE: não possui login e acessa apenas o ranking público do acampamento.
-- GESTOR: possui login e gerencia os acampamentos aos quais tem permissão.
-- ADMIN: gerencia a plataforma, usuários, convites, solicitações, organizações e acampamentos.
-
-A segurança usa Supabase Auth, tabelas versionadas em SQL e Row Level Security no PostgreSQL.
-
-As organizações possuem membros com roles `owner` e `manager`. A camada de segurança impede que uma organização fique sem pelo menos um `owner` ativo. Managers podem visualizar membros, mas não gerenciar permissões.
-
-O ranking público usa views e consultas restritas para evitar exposição de dados sensíveis dos participantes.
-
-A aprovação automática usa `ACAMPGESTOR_ADMIN_API_KEY` somente dentro da Edge Function. Essa secret deve receber uma chave administrativa server-side do Supabase. Ela não deve ser exposta no frontend, não deve entrar no `.env` do Vite e não deve ser commitada. `SUPABASE_SERVICE_ROLE_KEY` pode existir no runtime da Supabase, mas o projeto usa a secret customizada para evitar conflito com nomes reservados da CLI.
+- file-saver
+- Node.js test runner / `node:test`
+- Vercel
 
 ## Banco de Dados
 
-Os scripts SQL ficam em `supabase/sql` e devem ser aplicados manualmente no Supabase, na ordem numérica.
+Os scripts em `supabase/sql` representam a evolução versionada do schema, das relações de domínio e das políticas de acesso.
 
 Scripts versionados:
 
@@ -183,13 +209,61 @@ Scripts versionados:
 - `010_create_organizations.sql`
 - `011_manage_organization_members.sql`
 - `012_organization_security_hardening.sql`
+- `013_create_competition_teams.sql`
+
+## Rotas Principais
+
+### Públicas
+
+- `/`
+- `/login`
+- `/solicitar-acesso`
+- `/recuperar-senha`
+- `/redefinir-senha`
+- `/convite/:token`
+- `/:campSlug`
+
+### ADMIN
+
+- `/admin`
+- `/admin/conta`
+- `/admin/solicitacoes`
+- `/admin/usuarios`
+- `/admin/convites`
+- `/admin/organizacoes`
+- `/admin/organizacoes/:organizationId/membros`
+- `/admin/acampamentos`
+- `/admin/tribos` - gestão de Equipes/Quartos
+- `/admin/times`
+- `/admin/participantes`
+- `/admin/pontuacao`
+- `/admin/gincana`
+- `/admin/inspecoes`
+- `/admin/historico`
+- `/admin/exportacao`
+
+### GESTOR
+
+- `/gestor`
+- `/:campSlug/gestor`
+- `/:campSlug/gestor/conta`
+- `/:campSlug/gestor/equipes`
+- `/:campSlug/gestor/times`
+- `/:campSlug/gestor/participantes`
+- `/:campSlug/gestor/pontuacao`
+- `/:campSlug/gestor/gincana`
+- `/:campSlug/gestor/inspecoes`
+- `/:campSlug/gestor/historico`
+- `/:campSlug/gestor/exportacao`
+
+As rotas `/:campSlug/admin/*` permanecem como compatibilidade e redirecionam para `/:campSlug/gestor/*`.
 
 ## Estrutura do Projeto
 
 ```text
 src/
   components/   Componentes reutilizáveis da interface
-  data/         Dados iniciais e apoios locais
+  data/         Dados de apoio locais
   domain/       Regras puras de ranking e pontuação
   hooks/        Hooks compartilhados
   lib/          Configuração do Supabase
@@ -197,29 +271,24 @@ src/
   utils/        Utilitários compartilhados
 
 supabase/
-  functions/    Edge Functions do Supabase
-  sql/          Scripts SQL versionados
+  functions/
+    approve-access-request/
+  sql/
+
+vercel.json
+vite.config.js
+package.json
 ```
-
-## Checklist Final de Produção
-
-- Variáveis do Supabase configuradas na Vercel.
-- Secret `ACAMPGESTOR_ADMIN_API_KEY` configurada no ambiente da Edge Function.
-- Edge Function `approve-access-request` deployada no Supabase.
-- Auth Redirect URLs configuradas no Supabase.
-- SQLs `001` a `012` aplicados no Supabase.
-- Ranking público validado.
-- Painel ADMIN validado.
-- Painel por slug validado.
-- Solicitações de acesso validadas.
-- Aprovação automática de solicitações validada.
-- Convites administrativos validados.
 
 ## Status
 
-V1 finalizada para apresentação em portfólio.
+A V1 está funcionalmente implementada e passou pelas validações automatizadas de testes, lint e build. A validação manual integrada dos fluxos permanece como etapa final de homologação.
 
-Projeto desenvolvido para prática full stack, arquitetura de produto real, integração com Supabase, regras de autorização, RLS e organização profissional de código.
+Validação automatizada atual:
+
+- 27 testes automatizados;
+- lint aprovado;
+- build de produção aprovado.
 
 ## Autor
 
