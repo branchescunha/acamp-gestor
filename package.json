@@ -1,5 +1,5 @@
 {
-  "name": "tribes-tournament",
+  "name": "acamp-gestor",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/domain/__tests__/*.test.js",
+    "test": "node --test src/domain/__tests__/*.test.js src/utils/__tests__/*.test.js src/features/export/__tests__/*.test.js src/features/participants/__tests__/*.test.js src/features/scores/__tests__/*.test.js",
     "preview": "vite preview",
     "format": "prettier . --write"
   },

@@ -4,6 +4,7 @@ import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import { useAuthContext } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   name: '',
@@ -58,7 +59,7 @@ export default function Invitations() {
       .order('created_at', { ascending: false })
 
     if (loadError) {
-      console.error(loadError)
+      logError('Invitations', loadError)
       setError('Não foi possível carregar os convites.')
       setLoading(false)
       return
@@ -187,21 +188,17 @@ export default function Invitations() {
           .from('invitations')
           .update(payload)
           .eq('id', editingId)
-          .select()
-          .single()
       : supabase
           .from('invitations')
           .insert({
             ...payload,
             created_by: session?.user?.id,
           })
-          .select()
-          .single()
 
     const { error: saveError } = await request
 
     if (saveError) {
-      console.error(saveError)
+      logError('Invitations', saveError)
       setError(getSaveErrorMessage(saveError))
       setSaving(false)
       return
@@ -241,7 +238,7 @@ export default function Invitations() {
       setSuccess('Link do convite copiado.')
       setError('')
     } catch (copyError) {
-      console.error(copyError)
+      logError('Invitations', copyError)
       setError('Não foi possível copiar o link automaticamente.')
     }
   }
@@ -283,7 +280,7 @@ Observação: sua conta precisa existir previamente. Caso ainda não tenha receb
       setSuccess('Mensagem do convite copiada.')
       setError('')
     } catch (copyError) {
-      console.error(copyError)
+      logError('Invitations', copyError)
       setError('Não foi possível copiar a mensagem automaticamente.')
       setSuccess('')
     }
@@ -315,7 +312,7 @@ Observação: sua conta precisa existir previamente. Caso ainda não tenha receb
       .single()
 
     if (sendError) {
-      console.error(sendError)
+      logError('Invitations', sendError)
       setError('Não foi possível marcar o convite como enviado.')
       setSendingId(null)
       return

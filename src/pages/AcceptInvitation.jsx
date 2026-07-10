@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { useAuthContext } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const roleLabels = {
   admin: 'Administrador',
@@ -45,7 +46,7 @@ export default function AcceptInvitation() {
     )
 
     if (loadError) {
-      console.error(loadError)
+      logError('AcceptInvitation', loadError)
       setInvitation(null)
       setError('Não foi possível carregar este convite.')
       setLoading(false)
@@ -79,7 +80,7 @@ export default function AcceptInvitation() {
     )
 
     if (acceptError) {
-      console.error(acceptError)
+      logError('AcceptInvitation', acceptError)
       setError(
         acceptError.message ||
           'Não foi possível ativar o acesso deste convite.',

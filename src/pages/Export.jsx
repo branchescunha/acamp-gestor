@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import { calculateRanking } from '../domain/ranking'
+import { loadExportData } from '../features/export/exportData'
 import { summarizeScores } from '../domain/scoring'
 import { useActiveCamp } from '../hooks/useActiveCamp'
 import { supabase } from '../lib/supabase'
+import { sanitizeExcelRow } from '../features/export/sanitizeExcelValue'
+import { formatDateOnly } from '../utils/date'
+import { useToast } from '../hooks/useToast'
+import { logError } from '../utils/logger'
 
 export default function Export() {
   const [loading, setLoading] = useState(false)
@@ -15,6 +20,7 @@ export default function Export() {
   const [selectedCampId, setSelectedCampId] = useState('')
   const { campSlug = '' } = useParams()
   const { activeCampId } = useActiveCamp()
+  const { showError } = useToast()
   const isSlugExport = Boolean(campSlug)
 
   const selectedCamp = useMemo(() => {
@@ -39,7 +45,7 @@ export default function Export() {
         if (shouldIgnore) return
 
         if (error || !data) {
-          if (error) console.error(error)
+          if (error) logError('Export', error)
           setSlugCamp(null)
           setSelectedCampId('')
           setScopeError('Não foi possível carregar o acampamento desta URL.')
@@ -61,7 +67,7 @@ export default function Export() {
       if (shouldIgnore) return
 
       if (error) {
-        console.error(error)
+        logError('Export', error)
         setCamps([])
         setSelectedCampId('')
         setScopeError('Não foi possível carregar os acampamentos disponíveis.')
@@ -93,28 +99,11 @@ export default function Export() {
     return new Date(date).toLocaleString('pt-BR')
   }
 
-  function formatCampDate(date) {
-    if (!date) return '-'
-    return new Date(`${date}T00:00:00`).toLocaleDateString('pt-BR')
-  }
-
   function getExportFileName(camp) {
     const campSlugOrId = camp?.slug || camp?.id || 'acampamento'
     return `acampgestor-backup-${campSlugOrId}-${new Date()
       .toISOString()
       .slice(0, 10)}.xlsx`
-  }
-
-  function sanitizeExcelText(value) {
-    if (typeof value !== 'string') return value
-    if (!/^\s*[=+\-@]/.test(value)) return value
-    return `'${value}`
-  }
-
-  function sanitizeExcelRow(row) {
-    return Object.fromEntries(
-      Object.entries(row).map(([key, value]) => [key, sanitizeExcelText(value)])
-    )
   }
 
   function getLegacyGymkhanaTeamName(team, settings, tribes = []) {
@@ -301,7 +290,7 @@ export default function Export() {
 
   async function handleExport() {
     if (!selectedCamp?.id) {
-      alert('Selecione um acampamento para exportar.')
+      showError('Selecione um acampamento para exportar.')
       return
     }
 
@@ -317,133 +306,38 @@ export default function Export() {
         fileSaverModule.default?.saveAs ||
         fileSaverModule.default
 
-      const exportCampId = selectedCamp.id
-      const { data: tribesData, error: tribesError } = await supabase
-        .from('tribes')
-        .select('*')
-        .eq('camp_id', exportCampId)
-        .order('name')
+      const {
+        tribes,
+        competitionTeams,
+        participants,
+        events,
+        gymkhana,
+        inspections,
+        settings,
+      } = await loadExportData(selectedCamp.id)
 
-      const { data: competitionTeamsData, error: competitionTeamsError } =
-        await supabase
-          .from('competition_teams')
-          .select('*')
-          .eq('camp_id', exportCampId)
-          .order('status', { ascending: true })
-          .order('name', { ascending: true })
-
-      const { data: participantsData, error: participantsError } =
-        await supabase
-          .from('participants')
-          .select(
-            `
-          *,
-          tribes (
-            name,
-            symbol,
-            color
-          ),
-          competition_teams (
-            name,
-            symbol,
-            color,
-            status
-          )
-        `
-          )
-          .eq('camp_id', exportCampId)
-          .order('full_name')
-
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('score_events')
-        .select(
-          `
-          *,
-          tribes (
-            name,
-            symbol,
-            color
-          ),
-          competition_teams (
-            name,
-            symbol,
-            color,
-            status
-          ),
-          participants (
-            full_name
-          )
-        `
-        )
-        .eq('camp_id', exportCampId)
-        .order('created_at', { ascending: false })
-
-      const { data: gymkhanaData, error: gymkhanaError } = await supabase
-        .from('gymkhana_events')
-        .select('*')
-        .eq('camp_id', exportCampId)
-        .order('created_at', { ascending: false })
-
-      const { data: inspectionsData, error: inspectionsError } = await supabase
-        .from('room_inspections')
-        .select(
-          `
-          *,
-          tribes (
-            name,
-            symbol,
-            color,
-            room_name,
-            room_type
-          )
-        `
-        )
-        .eq('camp_id', exportCampId)
-        .order('created_at', { ascending: false })
-
-      const { data: settingsRows, error: settingsError } = await supabase
-        .from('gymkhana_settings')
-        .select('*')
-        .eq('camp_id', exportCampId)
-        .limit(1)
-
-      if (
-        tribesError ||
-        competitionTeamsError ||
-        participantsError ||
-        eventsError ||
-        gymkhanaError ||
-        inspectionsError ||
-        settingsError
-      ) {
-        throw (
-          tribesError ||
-          competitionTeamsError ||
-          participantsError ||
-          eventsError ||
-          gymkhanaError ||
-          inspectionsError ||
-          settingsError
-        )
-      }
-
-      const tribes = tribesData || []
-      const competitionTeams = competitionTeamsData || []
-      const participants = participantsData || []
-      const events = eventsData || []
-      const gymkhanaEvents = gymkhanaData || []
-      const inspections = inspectionsData || []
-      const settingsData = settingsRows?.[0]
-
-      const settings = {
-        team_a_name: settingsData?.team_a_name || 'Equipe A',
-        team_b_name: settingsData?.team_b_name || 'Equipe B',
-      }
-
-      const competitiveEvents = events.filter(
-        (eventItem) => eventItem.competition_team_id
+      const activeCompetitionTeams = competitionTeams.filter(
+        (team) => team.status === 'active',
       )
-
+      const inactiveCompetitionTeams = competitionTeams.filter(
+        (team) => team.status !== 'active',
+      )
+      const competitiveEvents = events.filter(
+        (eventItem) => eventItem.competition_team_id,
+      )
+      const positiveEvents = competitiveEvents.filter(
+        (eventItem) => Number(eventItem.points) > 0,
+      )
+      const penaltyEvents = competitiveEvents.filter(
+        (eventItem) => Number(eventItem.points) < 0,
+      )
+      const competitivePositiveEvents = positiveEvents
+      const competitivePenaltyEvents = penaltyEvents
+      const {
+        positivePoints: totalPositivePoints,
+        penaltyPoints: totalPenaltyPoints,
+        total: totalBalance,
+      } = summarizeScores(competitiveEvents)
       const ranking = calculateRanking(
         competitionTeams,
         competitiveEvents,
@@ -452,46 +346,14 @@ export default function Export() {
           includeInactive: true,
           scoreTeamIdField: 'competition_team_id',
           participantTeamIdField: 'competition_team_id',
-        }
+        },
       )
-
       const activeRanking = ranking.filter((team) => team.isActive)
-
-      const activeCompetitionTeams = competitionTeams.filter(
-        (team) => team.status === 'active'
-      )
-
-      const inactiveCompetitionTeams = competitionTeams.filter(
-        (team) => team.status === 'inactive'
-      )
-
-      const positiveEvents = events.filter(
-        (eventItem) => Number(eventItem.points || 0) > 0
-      )
-
-      const penaltyEvents = events.filter(
-        (eventItem) => Number(eventItem.points || 0) < 0
-      )
-
-      const competitivePositiveEvents = competitiveEvents.filter(
-        (eventItem) => Number(eventItem.points || 0) > 0
-      )
-
-      const competitivePenaltyEvents = competitiveEvents.filter(
-        (eventItem) => Number(eventItem.points || 0) < 0
-      )
-
-      const {
-        positivePoints: totalPositivePoints,
-        penaltyPoints: totalPenaltyPoints,
-        total: totalBalance,
-      } = summarizeScores(competitiveEvents)
-
       const leader = activeRanking[0]
-
       const legacyGymkhanaParticipants = participants.filter(
-        (participant) => participant.gymkhana_team
+        (participant) => participant.tribe_id && !participant.competition_team_id,
       )
+      const gymkhanaEvents = gymkhana
 
       const workbook = new ExcelJS.Workbook()
       workbook.creator = 'AcampGestor'
@@ -515,11 +377,11 @@ export default function Export() {
           { metric: 'Slug público', value: selectedCamp.slug || '-' },
           {
             metric: 'Data de início',
-            value: formatCampDate(selectedCamp.start_date),
+            value: formatDateOnly(selectedCamp.start_date),
           },
           {
             metric: 'Data de fim',
-            value: formatCampDate(selectedCamp.end_date),
+            value: formatDateOnly(selectedCamp.end_date),
           },
           { metric: 'Data da exportação', value: formatDate(new Date()) },
           { metric: 'Times cadastrados', value: competitionTeams.length },
@@ -715,7 +577,7 @@ export default function Export() {
           id: participant.id,
           full_name: participant.full_name,
           birth_date: participant.birth_date
-            ? new Date(participant.birth_date).toLocaleDateString('pt-BR')
+            ? formatDateOnly(participant.birth_date)
             : '',
           age: participant.age || '',
           church: participant.church || '',
@@ -960,8 +822,8 @@ export default function Export() {
 
       saveAsFile(new Blob([buffer]), getExportFileName(selectedCamp))
     } catch (error) {
-      console.error(error)
-      alert(`Erro ao exportar relatório: ${error.message}`)
+      logError('Export', error)
+      showError('Erro ao exportar relatório.')
     } finally {
       setLoading(false)
     }

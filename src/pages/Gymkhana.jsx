@@ -3,7 +3,10 @@ import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import { useActiveCamp } from '../hooks/useActiveCamp'
+import { useConfirm } from '../hooks/useConfirm'
+import { useToast } from '../hooks/useToast'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   title: '',
@@ -28,6 +31,8 @@ export default function Gymkhana() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
+  const requestConfirmation = useConfirm()
+  const { showError } = useToast()
 
   const loadData = useCallback(async (shouldIgnore = () => false) => {
     setLoading(true)
@@ -73,7 +78,9 @@ export default function Gymkhana() {
 
     const { data: historyData, error: historyError } = await supabase
       .from('gymkhana_events')
-      .select('*')
+      .select(
+        'id, camp_id, title, winning_team, winning_competition_team_id, points_per_member, notes, created_at',
+      )
       .eq('camp_id', activeCampId)
       .order('created_at', { ascending: false })
 
@@ -90,7 +97,7 @@ export default function Gymkhana() {
       historyError ||
       settingsError
     ) {
-      console.error(
+      logError('Gymkhana',
         competitionTeamsError ||
           legacyTribesError ||
           participantsError ||
@@ -206,34 +213,34 @@ export default function Gymkhana() {
     event.preventDefault()
 
     if (!activeCampId) {
-      alert('Selecione um acampamento antes de lançar gincanas.')
+      showError('Selecione um acampamento antes de lançar gincanas.')
       return
     }
 
     if (competitionTeams.length < 2) {
-      alert('Cadastre pelo menos dois times para lançar resultados da gincana.')
+      showError('Cadastre pelo menos dois times para lançar resultados da gincana.')
       return
     }
 
     if (!form.title.trim()) {
-      alert('Informe o nome da prova.')
+      showError('Informe o nome da prova.')
       return
     }
 
     if (!form.winning_competition_team_id) {
-      alert('Selecione o time vencedor.')
+      showError('Selecione o time vencedor.')
       return
     }
 
     const winningTeam = getWinningTeam(form.winning_competition_team_id)
 
     if (!winningTeam) {
-      alert('Selecione um time vencedor válido.')
+      showError('Selecione um time vencedor válido.')
       return
     }
 
     if (!form.points_per_member || Number(form.points_per_member) <= 0) {
-      alert('Informe uma pontuação válida para o resultado.')
+      showError('Informe uma pontuação válida para o resultado.')
       return
     }
 
@@ -276,7 +283,7 @@ export default function Gymkhana() {
         const { data: gymkhanaEvent, error: createEventError } = await supabase
           .from('gymkhana_events')
           .insert(eventPayload)
-          .select()
+          .select('id')
           .single()
 
         if (createEventError) throw createEventError
@@ -288,8 +295,8 @@ export default function Gymkhana() {
       setEditingId(null)
       await loadData()
     } catch (error) {
-      console.error(error)
-      alert(`Erro ao salvar resultado da gincana: ${error.message}`)
+      logError('Gymkhana', error)
+      showError('Erro ao salvar resultado da gincana.')
     } finally {
       setSaving(false)
     }
@@ -315,9 +322,12 @@ export default function Gymkhana() {
   }
 
   async function handleDelete(eventItem) {
-    const confirmDelete = confirm(
-      'Tem certeza que deseja excluir este lançamento da gincana? As pontuações vinculadas também serão removidas.'
-    )
+    const confirmDelete = await requestConfirmation({
+      title: 'Excluir lançamento da gincana',
+      description:
+        'Tem certeza que deseja excluir este lançamento da gincana? As pontuações vinculadas também serão removidas.',
+      confirmLabel: 'Excluir',
+    })
 
     if (!confirmDelete) return
 
@@ -347,8 +357,8 @@ export default function Gymkhana() {
 
       await loadData()
     } catch (error) {
-      console.error(error)
-      alert(`Erro ao excluir lançamento da gincana: ${error.message}`)
+      logError('Gymkhana', error)
+      showError('Erro ao excluir lançamento da gincana.')
     } finally {
       setSaving(false)
     }
@@ -358,7 +368,7 @@ export default function Gymkhana() {
     const currentEvent = history.find((eventItem) => eventItem.id === editingId)
 
     if (!currentEvent) {
-      alert('Lançamento não encontrado.')
+      showError('Lançamento não encontrado.')
       return
     }
 

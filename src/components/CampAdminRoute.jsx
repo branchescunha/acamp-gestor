@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, Navigate, Outlet, useLocation, useParams } from 'react-router-dom'
 import AdminLayout from './AdminLayout'
 import RoleAccessNotice from './RoleAccessNotice'
@@ -7,6 +7,7 @@ import { useActiveCamp } from '../hooks/useActiveCamp'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
 import { isValidSlug } from '../utils/slug'
+import { logError } from '../utils/logger'
 
 export default function CampAdminRoute() {
   const { campSlug = '' } = useParams()
@@ -49,7 +50,7 @@ export default function CampAdminRoute() {
       if (shouldIgnore) return
 
       if (error || !data) {
-        if (error) console.error(error)
+        if (error) logError('CampAdminRoute', error)
         setCamp(null)
         setNotFound(true)
         setLoadingCamp(false)
@@ -69,7 +70,7 @@ export default function CampAdminRoute() {
 
         if (shouldIgnore) return
 
-        if (membershipError) console.error(membershipError)
+        if (membershipError) logError('CampAdminRoute', membershipError)
 
         canAccessCamp = Boolean(membershipData)
       }

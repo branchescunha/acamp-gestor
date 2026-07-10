@@ -8,6 +8,7 @@ import {
   ListChecks,
   School,
   ShieldCheck,
+  Swords,
   TentTree,
   Trophy,
   UserCog,
@@ -17,7 +18,8 @@ import {
 const audiences = [
   {
     title: 'Igrejas',
-    description: 'Organize retiros, congressos e acampamentos com equipes e ranking público.',
+    description:
+      'Organize retiros, congressos e acampamentos com Times competitivos e ranking público.',
     icon: Building2,
   },
   {
@@ -39,7 +41,8 @@ const audiences = [
 
 const features = [
   ['Criação de acampamentos', TentTree],
-  ['Equipes e tribos', Trophy],
+  ['Equipes/Quartos', Trophy],
+  ['Times competitivos', Swords],
   ['Participantes', Users],
   ['Pontuação', BarChart3],
   ['Gincanas', ListChecks],
@@ -64,15 +67,15 @@ const steps = [
   'A organização solicita acesso',
   'O administrador libera o uso',
   'O gestor cria o acampamento',
-  'As equipes e participantes são cadastrados',
+  'Equipes/Quartos, Times e participantes são cadastrados',
   'As pontuações são lançadas',
   'O ranking público pode ser compartilhado',
 ]
 
 const rankingPreview = [
-  { name: 'Equipe Azul', points: 980, color: 'bg-blue-500' },
-  { name: 'Equipe Verde', points: 850, color: 'bg-emerald-500' },
-  { name: 'Equipe Vermelha', points: 730, color: 'bg-red-500' },
+  { name: 'Time Azul', points: 980, color: 'bg-blue-500' },
+  { name: 'Time Verde', points: 850, color: 'bg-emerald-500' },
+  { name: 'Time Vermelho', points: 730, color: 'bg-red-500' },
 ]
 
 function PrimaryCta({ className = '' }) {
@@ -135,7 +138,7 @@ export default function LandingPage() {
             </p>
 
             <h1 className="mt-5 max-w-4xl text-4xl font-black leading-tight md:text-6xl">
-              Gestão de acampamentos com equipes, pontuação e ranking público.
+              Gestão de acampamentos com Times, pontuação e ranking público.
             </h1>
 
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-zinc-300 md:text-lg">
@@ -183,7 +186,7 @@ export default function LandingPage() {
             <div className="mt-5 grid grid-cols-3 gap-3 text-center text-sm">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
                 <strong className="block text-xl">8</strong>
-                <span className="text-zinc-400">equipes</span>
+                <span className="text-zinc-400">times</span>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
                 <strong className="block text-xl">142</strong>
@@ -204,7 +207,7 @@ export default function LandingPage() {
             Para quem é
           </p>
           <h2 className="mt-4 text-3xl font-black md:text-4xl">
-            Feito para quem organiza eventos com equipes.
+            Feito para quem organiza eventos com grupos e Times.
           </h2>
 
           <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -362,7 +365,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-3 text-sm text-zinc-400 md:flex-row md:items-center md:justify-between">
           <strong className="text-white">AcampGestor</strong>
           <span>
-            Plataforma para gestão de acampamentos, equipes e rankings.
+            Plataforma para gestão de acampamentos, Times e rankings.
           </span>
         </div>
       </footer>

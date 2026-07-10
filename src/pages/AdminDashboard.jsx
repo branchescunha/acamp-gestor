@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialMetrics = {
   organizations: 0,
@@ -176,7 +177,7 @@ export default function AdminDashboard() {
     const dashboardError = responses.find((response) => response.error)?.error
 
     if (dashboardError) {
-      console.error(dashboardError)
+      logError('AdminDashboard', dashboardError)
       setError('Não foi possível carregar o dashboard administrativo.')
       setLoading(false)
       return

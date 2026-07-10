@@ -1,6 +1,7 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 export default function RequestAccess() {
   const [name, setName] = useState('')
@@ -51,7 +52,7 @@ export default function RequestAccess() {
     setLoading(false)
 
     if (insertError) {
-      console.error(insertError)
+      logError('RequestAccess', insertError)
       setError('Não foi possível enviar a solicitação. Tente novamente.')
       return
     }

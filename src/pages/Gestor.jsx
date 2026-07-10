@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { LogOut, TentTree } from 'lucide-react'
 import { useActiveCamp } from '../hooks/useActiveCamp'
 import { useAuthContext } from '../hooks/useAuth'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 export default function Gestor() {
   const location = useLocation()
@@ -32,7 +33,7 @@ export default function Gestor() {
       .order('name', { ascending: true })
 
     if (campsError) {
-      console.error(campsError)
+      logError('Gestor', campsError)
       setError('Não foi possível carregar seus acampamentos.')
       setLoadingCamps(false)
       return
@@ -99,7 +100,7 @@ export default function Gestor() {
     const { error: logoutError } = await supabase.auth.signOut()
 
     if (logoutError) {
-      console.error(logoutError)
+      logError('Gestor', logoutError)
       return
     }
   }

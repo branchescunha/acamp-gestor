@@ -6,6 +6,7 @@ import RoleAccessNotice from '../components/RoleAccessNotice'
 import { useAuthContext } from '../hooks/useAuth'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   name: '',
@@ -42,7 +43,7 @@ export default function Organizations() {
       .order('name', { ascending: true })
 
     if (loadError) {
-      console.error(loadError)
+      logError('Organizations', loadError)
       setError('Não foi possível carregar as organizações.')
       setLoading(false)
       return
@@ -145,7 +146,7 @@ export default function Organizations() {
           .from('organizations')
           .update(payload)
           .eq('id', editingId)
-          .select()
+          .select('id')
           .single()
       : supabase
           .from('organizations')
@@ -153,13 +154,13 @@ export default function Organizations() {
             ...payload,
             created_by: session?.user?.id,
           })
-          .select()
+          .select('id')
           .single()
 
     const { data: savedOrganization, error: saveError } = await request
 
     if (saveError) {
-      console.error(saveError)
+      logError('Organizations', saveError)
       setError('Não foi possível salvar a organização.')
       setSaving(false)
       return
@@ -180,7 +181,7 @@ export default function Organizations() {
     )
 
     if (memberError) {
-      console.error(memberError)
+      logError('Organizations', memberError)
       setError(
         'A organização foi salva, mas não foi possível vincular seu usuário como responsável.',
       )

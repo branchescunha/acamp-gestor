@@ -233,7 +233,7 @@ Scripts versionados:
 - `/admin/organizacoes`
 - `/admin/organizacoes/:organizationId/membros`
 - `/admin/acampamentos`
-- `/admin/tribos` - gestão de Equipes/Quartos
+- `/admin/equipes` - gestão de Equipes/Quartos
 - `/admin/times`
 - `/admin/participantes`
 - `/admin/pontuacao`

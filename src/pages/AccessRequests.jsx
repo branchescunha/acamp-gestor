@@ -6,6 +6,7 @@ import ResponsiveTable from '../components/ResponsiveTable'
 import { useAuthContext } from '../hooks/useAuth'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const statusLabels = {
   pending: 'Pendente',
@@ -41,11 +42,13 @@ export default function AccessRequests() {
 
     const { data, error: loadError } = await supabase
       .from('access_requests')
-      .select('*')
+      .select(
+        'id, name, email, church_name, message, status, created_at, reviewed_at, reviewed_by',
+      )
       .order('created_at', { ascending: false })
 
     if (loadError) {
-      console.error(loadError)
+      logError('AccessRequests', loadError)
       setError('Não foi possível carregar as solicitações de acesso.')
       setLoading(false)
       return
@@ -86,7 +89,7 @@ export default function AccessRequests() {
     )
 
     if (approvalError || !data?.success) {
-      console.error(approvalError || data)
+      logError('AccessRequests', approvalError || data)
       setError(
         data?.detail
           ? `Não foi possível aprovar automaticamente esta solicitação. ${data.detail}`
@@ -119,11 +122,13 @@ export default function AccessRequests() {
         reviewed_by: session?.user?.id,
       })
       .eq('id', requestId)
-      .select()
+      .select(
+        'id, name, email, church_name, message, status, created_at, reviewed_at, reviewed_by',
+      )
       .single()
 
     if (updateError) {
-      console.error(updateError)
+      logError('AccessRequests', updateError)
       setError('Não foi possível atualizar a solicitação.')
       setUpdatingId(null)
       return
@@ -148,7 +153,7 @@ export default function AccessRequests() {
       await navigator.clipboard.writeText(firstAccessLink)
       setSuccess('Link de primeiro acesso copiado.')
     } catch (copyError) {
-      console.error(copyError)
+      logError('AccessRequests', copyError)
       setError('Não foi possível copiar o link automaticamente.')
     }
   }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   id: '',
@@ -45,7 +46,7 @@ export default function Users() {
       .order('name', { ascending: true })
 
     if (loadError) {
-      console.error(loadError)
+      logError('Users', loadError)
       setError('Não foi possível carregar os perfis de acesso.')
       setLoading(false)
       return
@@ -153,21 +154,17 @@ export default function Users() {
           .from('profiles')
           .update(payload)
           .eq('id', editingId)
-          .select()
-          .single()
       : supabase
           .from('profiles')
           .insert({
             ...payload,
             id: form.id.trim(),
           })
-          .select()
-          .single()
 
     const { error: saveError } = await request
 
     if (saveError) {
-      console.error(saveError)
+      logError('Users', saveError)
       setError(getSaveErrorMessage(saveError))
       setSaving(false)
       return
