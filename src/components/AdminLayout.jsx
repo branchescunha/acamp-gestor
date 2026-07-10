@@ -10,7 +10,7 @@ import {
 import { useUserProfile } from '../hooks/useUserProfile'
 
 const adminOperationPaths = [
-  '/admin/tribos',
+  '/admin/equipes',
   '/admin/times',
   '/admin/participantes',
   '/admin/pontuacao',

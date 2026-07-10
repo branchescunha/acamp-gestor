@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import { useActiveCamp } from '../hooks/useActiveCamp'
+import { useConfirm } from '../hooks/useConfirm'
+import { useToast } from '../hooks/useToast'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const colorOptions = [
   { name: 'Dourado', value: '#eab308' },
@@ -34,7 +37,7 @@ const initialFilters = {
   gender: '',
 }
 
-export default function Tribes() {
+export default function CampGroups() {
   const [tribes, setTribes] = useState([])
   const [participants, setParticipants] = useState([])
   const [form, setForm] = useState(initialForm)
@@ -43,6 +46,8 @@ export default function Tribes() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
+  const requestConfirmation = useConfirm()
+  const { showError } = useToast()
 
   useEffect(() => {
     let shouldIgnore = false
@@ -52,20 +57,22 @@ export default function Tribes() {
 
       const { data: tribesData, error: tribesError } = await supabase
         .from('tribes')
-        .select('*')
+        .select(
+          'id, camp_id, name, symbol, color, room_type, room_name, leader_name, is_active, created_at',
+        )
         .eq('camp_id', activeCampId)
         .order('name')
 
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
-          .select('*')
+          .select('id, camp_id, full_name, tribe_id, gender, group_type, is_active')
           .eq('camp_id', activeCampId)
           .eq('is_active', true)
           .order('full_name')
 
       if (tribesError || participantsError) {
-        console.error(tribesError || participantsError)
+        logError('CampGroups', tribesError || participantsError)
         if (shouldIgnore) return
         setLoading(false)
         return
@@ -99,12 +106,14 @@ export default function Tribes() {
   async function reloadTribes() {
     const { data, error } = await supabase
       .from('tribes')
-      .select('*')
+      .select(
+        'id, camp_id, name, symbol, color, room_type, room_name, leader_name, is_active, created_at',
+      )
       .eq('camp_id', activeCampId)
       .order('name')
 
     if (error) {
-      console.error(error)
+      logError('CampGroups', error)
       return
     }
 
@@ -172,9 +181,12 @@ export default function Tribes() {
   }
 
   async function handleDelete() {
-    const confirmDelete = confirm(
-      'Tem certeza que deseja excluir esta equipe? Essa ação não pode ser desfeita.'
-    )
+    const confirmDelete = await requestConfirmation({
+      title: 'Excluir equipe',
+      description:
+        'Tem certeza que deseja excluir esta equipe? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+    })
 
     if (!confirmDelete) return
 
@@ -185,8 +197,8 @@ export default function Tribes() {
       .eq('camp_id', activeCampId)
 
     if (error) {
-      console.error(error)
-      alert('Erro ao excluir equipe.')
+      logError('CampGroups', error)
+      showError('Erro ao excluir equipe.')
       return
     }
 
@@ -199,17 +211,17 @@ export default function Tribes() {
     event.preventDefault()
 
     if (!activeCampId) {
-      alert('Selecione um acampamento antes de cadastrar equipes.')
+      showError('Selecione um acampamento antes de cadastrar equipes.')
       return
     }
 
     if (!form.name.trim()) {
-      alert('Informe o nome da equipe.')
+      showError('Informe o nome da equipe.')
       return
     }
 
     if (!form.symbol.trim()) {
-      alert('Informe o símbolo da equipe.')
+      showError('Informe o símbolo da equipe.')
       return
     }
 
@@ -237,8 +249,8 @@ export default function Tribes() {
     const { error } = await request
 
     if (error) {
-      console.error(error)
-      alert('Erro ao salvar equipe.')
+      logError('CampGroups', error)
+      showError('Erro ao salvar equipe.')
       setSaving(false)
       return
     }

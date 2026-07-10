@@ -1,52 +1,33 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
+import {
+  buildParticipantPayload,
+  filterParticipants,
+  initialParticipantFilters,
+  initialParticipantForm,
+  validateParticipantForm,
+} from '../features/participants/participantForm'
 import { useActiveCamp } from '../hooks/useActiveCamp'
+import { useConfirm } from '../hooks/useConfirm'
+import { useToast } from '../hooks/useToast'
 import { supabase } from '../lib/supabase'
-
-const initialForm = {
-  full_name: '',
-  age: '',
-  birth_date: '',
-  church: '',
-  cpf: '',
-  address: '',
-  shirt_size: '',
-  gender: '',
-  group_type: '',
-  phone: '',
-  guardian_phone: '',
-  food_restriction: '',
-  notes: '',
-  is_board_member: false,
-  tribe_id: '',
-  competition_team_id: '',
-  is_active: true,
-}
-
-const initialFilters = {
-  search: '',
-  tribe_id: '',
-  competition_team_id: '',
-  group_type: '',
-  gender: '',
-  age: '',
-  shirt_size: '',
-  board: '',
-  status: '',
-}
+import { calculateAgeFromDateOnly } from '../utils/date'
+import { logError } from '../utils/logger'
 
 export default function Participants() {
   const [participants, setParticipants] = useState([])
   const [tribes, setTribes] = useState([])
   const [competitionTeams, setCompetitionTeams] = useState([])
-  const [form, setForm] = useState(initialForm)
-  const [filters, setFilters] = useState(initialFilters)
+  const [form, setForm] = useState(initialParticipantForm)
+  const [filters, setFilters] = useState(initialParticipantFilters)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
+  const requestConfirmation = useConfirm()
+  const { showError } = useToast()
 
   useEffect(() => {
     let shouldIgnore = false
@@ -59,7 +40,25 @@ export default function Participants() {
           .from('participants')
           .select(
             `
-            *,
+            id,
+            camp_id,
+            full_name,
+            age,
+            birth_date,
+            church,
+            cpf,
+            address,
+            shirt_size,
+            gender,
+            group_type,
+            phone,
+            guardian_phone,
+            food_restriction,
+            notes,
+            is_board_member,
+            tribe_id,
+            competition_team_id,
+            is_active,
             tribes (
               name,
               color,
@@ -78,20 +77,20 @@ export default function Participants() {
 
       const { data: tribesData, error: tribesError } = await supabase
         .from('tribes')
-        .select('*')
+        .select('id, camp_id, name, color, symbol, room_type, room_name')
         .eq('camp_id', activeCampId)
         .order('name')
 
       const { data: competitionTeamsData, error: competitionTeamsError } =
         await supabase
           .from('competition_teams')
-          .select('*')
+          .select('id, camp_id, name, color, symbol, leader_name, status')
           .eq('camp_id', activeCampId)
           .order('status', { ascending: true })
           .order('name', { ascending: true })
 
       if (participantsError || tribesError || competitionTeamsError) {
-        console.error(
+        logError('Participants',
           participantsError || tribesError || competitionTeamsError
         )
         if (shouldIgnore) return
@@ -128,8 +127,8 @@ export default function Participants() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setForm(initialForm)
-      setFilters(initialFilters)
+      setForm(initialParticipantForm)
+      setFilters(initialParticipantFilters)
       setEditingId(null)
     }, 0)
 
@@ -143,7 +142,25 @@ export default function Participants() {
       .from('participants')
       .select(
         `
-        *,
+        id,
+        camp_id,
+        full_name,
+        age,
+        birth_date,
+        church,
+        cpf,
+        address,
+        shirt_size,
+        gender,
+        group_type,
+        phone,
+        guardian_phone,
+        food_restriction,
+        notes,
+        is_board_member,
+        tribe_id,
+        competition_team_id,
+        is_active,
         tribes (
           name,
           color,
@@ -161,31 +178,11 @@ export default function Participants() {
       .order('full_name')
 
     if (error) {
-      console.error(error)
+      logError('Participants', error)
       return
     }
 
     setParticipants(data || [])
-  }
-
-  function calculateAge(birthDate) {
-    if (!birthDate) return ''
-
-    const today = new Date()
-    const birth = new Date(birthDate)
-
-    let age = today.getFullYear() - birth.getFullYear()
-
-    const monthDifference = today.getMonth() - birth.getMonth()
-
-    if (
-      monthDifference < 0 ||
-      (monthDifference === 0 && today.getDate() < birth.getDate())
-    ) {
-      age--
-    }
-
-    return age
   }
 
   function handleChange(event) {
@@ -195,7 +192,7 @@ export default function Participants() {
       setForm((currentForm) => ({
         ...currentForm,
         birth_date: value,
-        age: calculateAge(value),
+        age: calculateAgeFromDateOnly(value),
       }))
 
       return
@@ -217,7 +214,7 @@ export default function Participants() {
   }
 
   function clearFilters() {
-    setFilters(initialFilters)
+    setFilters(initialParticipantFilters)
   }
 
   function handleEdit(participant) {
@@ -248,13 +245,16 @@ export default function Participants() {
 
   function handleCancelEdit() {
     setEditingId(null)
-    setForm(initialForm)
+    setForm(initialParticipantForm)
   }
 
   async function handleDelete() {
-    const confirmDelete = confirm(
-      'Tem certeza que deseja excluir este participante? Essa ação não pode ser desfeita.'
-    )
+    const confirmDelete = await requestConfirmation({
+      title: 'Excluir participante',
+      description:
+        'Tem certeza que deseja excluir este participante? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+    })
 
     if (!confirmDelete) return
 
@@ -265,12 +265,12 @@ export default function Participants() {
       .eq('camp_id', activeCampId)
 
     if (error) {
-      console.error(error)
-      alert('Erro ao excluir participante.')
+      logError('Participants', error)
+      showError('Erro ao excluir participante.')
       return
     }
 
-    setForm(initialForm)
+    setForm(initialParticipantForm)
     setEditingId(null)
     await reloadParticipants()
   }
@@ -278,48 +278,16 @@ export default function Participants() {
   async function handleSubmit(event) {
     event.preventDefault()
 
-    if (!activeCampId) {
-      alert('Selecione um acampamento antes de cadastrar participantes.')
-      return
-    }
+    const validationError = validateParticipantForm(form, activeCampId)
 
-    if (!form.full_name.trim()) {
-      alert('Informe o nome do participante.')
-      return
-    }
-
-    if (!form.gender) {
-      alert('Selecione o sexo.')
-      return
-    }
-
-    if (!form.group_type) {
-      alert('Selecione UPA ou UMP.')
+    if (validationError) {
+      showError(validationError)
       return
     }
 
     setSaving(true)
 
-    const payload = {
-      full_name: form.full_name.trim(),
-      age: form.age ? Number(form.age) : null,
-      birth_date: form.birth_date || null,
-      church: form.church.trim() || null,
-      cpf: form.cpf.trim() || null,
-      address: form.address.trim() || null,
-      shirt_size: form.shirt_size || null,
-      gender: form.gender,
-      group_type: form.group_type,
-      phone: form.phone.trim() || null,
-      guardian_phone: form.guardian_phone.trim() || null,
-      food_restriction: form.food_restriction.trim() || null,
-      notes: form.notes.trim() || null,
-      is_board_member: form.is_board_member,
-      tribe_id: form.tribe_id || null,
-      competition_team_id: form.competition_team_id || null,
-      is_active: form.is_active,
-      camp_id: activeCampId,
-    }
+    const payload = buildParticipantPayload(form, activeCampId)
 
     const request = editingId
       ? supabase
@@ -332,10 +300,10 @@ export default function Participants() {
     const { error } = await request
 
     if (error) {
-      console.error(error)
+      logError('Participants', error)
       const message =
         `${error.message || ''} ${error.details || ''}`.toLowerCase()
-      alert(
+      showError(
         error.code === '23503' ||
           error.code === '23514' ||
           message.includes('foreign key')
@@ -346,71 +314,14 @@ export default function Participants() {
       return
     }
 
-    setForm(initialForm)
+    setForm(initialParticipantForm)
     setEditingId(null)
     await reloadParticipants()
     setSaving(false)
   }
 
   const filteredParticipants = useMemo(() => {
-    return participants.filter((participant) => {
-      const search = filters.search.trim().toLowerCase()
-
-      const matchesSearch = search
-        ? participant.full_name?.toLowerCase().includes(search) ||
-          participant.phone?.toLowerCase().includes(search) ||
-          participant.guardian_phone?.toLowerCase().includes(search) ||
-          participant.church?.toLowerCase().includes(search) ||
-          participant.cpf?.toLowerCase().includes(search)
-        : true
-
-      const matchesTribe = filters.tribe_id
-        ? participant.tribe_id === filters.tribe_id
-        : true
-
-      const matchesCompetitionTeam =
-        filters.competition_team_id === 'none'
-          ? !participant.competition_team_id
-          : filters.competition_team_id
-            ? participant.competition_team_id === filters.competition_team_id
-            : true
-
-      const matchesGroup = filters.group_type
-        ? participant.group_type === filters.group_type
-        : true
-
-      const matchesGender = filters.gender
-        ? participant.gender === filters.gender
-        : true
-
-      const matchesAge = filters.age
-        ? Number(participant.age) === Number(filters.age)
-        : true
-
-      const matchesShirtSize = filters.shirt_size
-        ? participant.shirt_size === filters.shirt_size
-        : true
-
-      const matchesStatus = filters.status
-        ? String(participant.is_active) === filters.status
-        : true
-
-      const matchesBoard = filters.board
-        ? String(participant.is_board_member) === filters.board
-        : true
-
-      return (
-        matchesSearch &&
-        matchesTribe &&
-        matchesCompetitionTeam &&
-        matchesGroup &&
-        matchesGender &&
-        matchesAge &&
-        matchesShirtSize &&
-        matchesStatus &&
-        matchesBoard
-      )
-    })
+    return filterParticipants(participants, filters)
   }, [participants, filters])
 
   const activeCompetitionTeams = useMemo(() => {

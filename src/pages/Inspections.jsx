@@ -4,7 +4,10 @@ import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import { normalizeScoreAmount } from '../domain/scoring'
 import { useActiveCamp } from '../hooks/useActiveCamp'
+import { useConfirm } from '../hooks/useConfirm'
+import { useToast } from '../hooks/useToast'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   tribe_id: '',
@@ -36,6 +39,8 @@ export default function Inspections() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
+  const requestConfirmation = useConfirm()
+  const { showError } = useToast()
 
   const loadData = useCallback(async (shouldIgnore = () => false) => {
     if (!activeCampId) {
@@ -48,7 +53,7 @@ export default function Inspections() {
 
     const { data: tribesData, error: tribesError } = await supabase
       .from('tribes')
-      .select('*')
+      .select('id, camp_id, name, color, symbol, room_name, room_type')
       .eq('camp_id', activeCampId)
       .order('name')
 
@@ -70,7 +75,7 @@ export default function Inspections() {
       .order('created_at', { ascending: false })
 
     if (tribesError || inspectionsError) {
-      console.error(tribesError || inspectionsError)
+      logError('Inspections', tribesError || inspectionsError)
       if (shouldIgnore()) return
       setLoading(false)
       return
@@ -156,27 +161,27 @@ export default function Inspections() {
     event.preventDefault()
 
     if (!activeCampId) {
-      alert('Selecione um acampamento antes de lançar inspeções.')
+      showError('Selecione um acampamento antes de lançar inspeções.')
       return
     }
 
     if (!form.tribe_id) {
-      alert('Selecione uma equipe.')
+      showError('Selecione uma equipe.')
       return
     }
 
     if (!form.inspection_day) {
-      alert('Selecione o dia da inspeção.')
+      showError('Selecione o dia da inspeção.')
       return
     }
 
     if (!form.inspection_period) {
-      alert('Selecione o período da inspeção.')
+      showError('Selecione o período da inspeção.')
       return
     }
 
     if (form.points === '') {
-      alert('Informe a quantidade de pontos.')
+      showError('Informe a quantidade de pontos.')
       return
     }
 
@@ -216,7 +221,7 @@ export default function Inspections() {
         const { data: inspectionData, error: insertError } = await supabase
           .from('room_inspections')
           .insert(payload)
-          .select()
+          .select('id')
           .single()
 
         if (insertError) throw insertError
@@ -228,17 +233,20 @@ export default function Inspections() {
       setEditingId(null)
       await loadData()
     } catch (error) {
-      console.error(error)
-      alert(`Erro ao salvar inspeção: ${error.message}`)
+      logError('Inspections', error)
+      showError('Erro ao salvar inspeção.')
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete() {
-    const confirmDelete = confirm(
-      'Tem certeza que deseja excluir esta inspeção? Os pontos vinculados também serão removidos.'
-    )
+    const confirmDelete = await requestConfirmation({
+      title: 'Excluir inspeção',
+      description:
+        'Tem certeza que deseja excluir esta inspeção? Os pontos vinculados também serão removidos.',
+      confirmLabel: 'Excluir',
+    })
 
     if (!confirmDelete) return
 
@@ -265,8 +273,8 @@ export default function Inspections() {
       setEditingId(null)
       await loadData()
     } catch (error) {
-      console.error(error)
-      alert(`Erro ao excluir inspeção: ${error.message}`)
+      logError('Inspections', error)
+      showError('Erro ao excluir inspeção.')
     } finally {
       setSaving(false)
     }

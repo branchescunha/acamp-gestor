@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   ClipboardCheck,
@@ -24,9 +24,10 @@ import {
 } from '../hooks/useActiveCamp'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const adminOperationLinks = [
-  { label: 'Equipes', path: '/admin/tribos', icon: Trophy },
+  { label: 'Equipes', path: '/admin/equipes', icon: Trophy },
   { label: 'Times', path: '/admin/times', icon: Swords },
   { label: 'Participantes', path: '/admin/participantes', icon: Users },
   { label: 'Pontuação', path: '/admin/pontuacao', icon: PlusCircle },
@@ -145,7 +146,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
       if (shouldIgnore) return
 
       if (error) {
-        console.error(error)
+        logError('Sidebar', error)
         setActiveCampDetails(null)
         return
       }
@@ -174,7 +175,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
           .maybeSingle()
           .then(({ data, error }) => {
             if (error) {
-              console.error(error)
+              logError('Sidebar', error)
               return null
             }
 
@@ -209,7 +210,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
       .order('name', { ascending: true })
 
     if (error) {
-      console.error(error)
+      logError('Sidebar', error)
       setRankingMessage('Não foi possível carregar rankings públicos.')
       return
     }
@@ -226,7 +227,7 @@ export default function Sidebar({ isMenuOpen = false, onClose }) {
     const { error } = await supabase.auth.signOut()
 
     if (error) {
-      console.error(error)
+      logError('Sidebar', error)
       return
     }
 

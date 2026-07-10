@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import { getScoreCategories, getScoreTypeLabel } from '../domain/scoring'
 import { useActiveCamp } from '../hooks/useActiveCamp'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialFilters = {
   search: '',
@@ -34,7 +35,19 @@ export default function History() {
         .from('score_events')
         .select(
           `
-          *,
+          id,
+          camp_id,
+          tribe_id,
+          competition_team_id,
+          participant_id,
+          type,
+          category,
+          points,
+          reason,
+          notes,
+          gymkhana_event_id,
+          room_inspection_id,
+          created_at,
           tribes (
             name,
             color,
@@ -54,16 +67,16 @@ export default function History() {
         .eq('camp_id', activeCampId)
         .order('created_at', { ascending: false })
 
-      const { data: tribesData, error: tribesError } = await supabase
-        .from('tribes')
-        .select('*')
+    const { data: tribesData, error: tribesError } = await supabase
+      .from('tribes')
+      .select('id, camp_id, name, color, symbol')
         .eq('camp_id', activeCampId)
         .order('name')
 
       const { data: competitionTeamsData, error: competitionTeamsError } =
         await supabase
           .from('competition_teams')
-          .select('*')
+          .select('id, camp_id, name, color, symbol, status')
           .eq('camp_id', activeCampId)
           .order('status', { ascending: true })
           .order('name', { ascending: true })
@@ -71,7 +84,7 @@ export default function History() {
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
-          .select('*')
+          .select('id, camp_id, full_name, tribe_id, competition_team_id, is_active')
           .eq('camp_id', activeCampId)
           .order('full_name')
 
@@ -81,7 +94,7 @@ export default function History() {
         competitionTeamsError ||
         participantsError
       ) {
-        console.error(
+        logError('History',
           eventsError ||
             tribesError ||
             competitionTeamsError ||

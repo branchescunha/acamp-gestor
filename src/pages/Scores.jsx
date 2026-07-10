@@ -1,46 +1,38 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import {
   getScoreCategories,
   getScoreTypeLabel,
-  normalizeScoreAmount,
 } from '../domain/scoring'
+import {
+  buildScorePayload,
+  filterScoreEvents,
+  initialScoreFilters,
+  initialScoreForm,
+  isLegacyScoreEditing,
+  validateScoreForm,
+} from '../features/scores/scoreForm'
 import { useActiveCamp } from '../hooks/useActiveCamp'
+import { useConfirm } from '../hooks/useConfirm'
+import { useToast } from '../hooks/useToast'
 import { supabase } from '../lib/supabase'
-
-const initialForm = {
-  tribe_id: '',
-  competition_team_id: '',
-  participant_id: '',
-  type: 'POINT',
-  category: '',
-  points: '',
-  reason: '',
-  notes: '',
-}
-
-const initialFilters = {
-  search: '',
-  competition_team_id: '',
-  tribe_id: '',
-  participant_id: '',
-  type: '',
-  category: '',
-}
+import { logError } from '../utils/logger'
 
 export default function Scores() {
   const [tribes, setTribes] = useState([])
   const [competitionTeams, setCompetitionTeams] = useState([])
   const [participants, setParticipants] = useState([])
   const [events, setEvents] = useState([])
-  const [form, setForm] = useState(initialForm)
-  const [filters, setFilters] = useState(initialFilters)
+  const [form, setForm] = useState(initialScoreForm)
+  const [filters, setFilters] = useState(initialScoreFilters)
   const [editingId, setEditingId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
+  const requestConfirmation = useConfirm()
+  const { showError } = useToast()
 
   useEffect(() => {
     let shouldIgnore = false
@@ -50,14 +42,14 @@ export default function Scores() {
 
       const { data: tribesData, error: tribesError } = await supabase
         .from('tribes')
-        .select('*')
+        .select('id, camp_id, name, color, symbol')
         .eq('camp_id', activeCampId)
         .order('name')
 
       const { data: competitionTeamsData, error: competitionTeamsError } =
         await supabase
           .from('competition_teams')
-          .select('*')
+          .select('id, camp_id, name, color, symbol, status')
           .eq('camp_id', activeCampId)
           .order('status', { ascending: true })
           .order('name', { ascending: true })
@@ -65,7 +57,7 @@ export default function Scores() {
       const { data: participantsData, error: participantsError } =
         await supabase
           .from('participants')
-          .select('*')
+          .select('id, camp_id, full_name, tribe_id, competition_team_id, is_active')
           .eq('camp_id', activeCampId)
           .eq('is_active', true)
           .order('full_name')
@@ -74,7 +66,19 @@ export default function Scores() {
         .from('score_events')
         .select(
           `
-          *,
+          id,
+          camp_id,
+          tribe_id,
+          competition_team_id,
+          participant_id,
+          type,
+          category,
+          points,
+          reason,
+          notes,
+          gymkhana_event_id,
+          room_inspection_id,
+          created_at,
           tribes (
             name,
             color,
@@ -100,7 +104,7 @@ export default function Scores() {
         participantsError ||
         eventsError
       ) {
-        console.error(
+        logError('Scores',
           tribesError ||
             competitionTeamsError ||
             participantsError ||
@@ -142,8 +146,8 @@ export default function Scores() {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setForm(initialForm)
-      setFilters(initialFilters)
+      setForm(initialScoreForm)
+      setFilters(initialScoreFilters)
       setEditingId(null)
     }, 0)
 
@@ -157,7 +161,19 @@ export default function Scores() {
       .from('score_events')
       .select(
         `
-        *,
+        id,
+        camp_id,
+        tribe_id,
+        competition_team_id,
+        participant_id,
+        type,
+        category,
+        points,
+        reason,
+        notes,
+        gymkhana_event_id,
+        room_inspection_id,
+        created_at,
         tribes (
           name,
           color,
@@ -178,7 +194,7 @@ export default function Scores() {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error(error)
+      logError('Scores', error)
       return
     }
 
@@ -235,7 +251,7 @@ export default function Scores() {
   }
 
   function clearFilters() {
-    setFilters(initialFilters)
+    setFilters(initialScoreFilters)
   }
 
   function handleEdit(eventItem) {
@@ -257,13 +273,16 @@ export default function Scores() {
 
   function handleCancelEdit() {
     setEditingId(null)
-    setForm(initialForm)
+    setForm(initialScoreForm)
   }
 
   async function handleDelete() {
-    const confirmDelete = confirm(
-      'Tem certeza que deseja excluir este lançamento? Essa ação não pode ser desfeita.'
-    )
+    const confirmDelete = await requestConfirmation({
+      title: 'Excluir lançamento',
+      description:
+        'Tem certeza que deseja excluir este lançamento? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+    })
 
     if (!confirmDelete) return
 
@@ -274,13 +293,13 @@ export default function Scores() {
       .eq('camp_id', activeCampId)
 
     if (error) {
-      console.error(error)
-      alert('Erro ao excluir lançamento.')
+      logError('Scores', error)
+      showError('Erro ao excluir lançamento.')
       return
     }
 
     setEditingId(null)
-    setForm(initialForm)
+    setForm(initialScoreForm)
     await reloadEvents()
   }
 
@@ -288,42 +307,26 @@ export default function Scores() {
     event.preventDefault()
 
     if (!activeCampId) {
-      alert('Selecione um acampamento antes de lançar pontuações.')
+      showError('Selecione um acampamento antes de lançar pontuações.')
       return
     }
 
-    const isLegacyEditing = Boolean(
-      editingId && form.tribe_id && !form.competition_team_id
+    const isLegacyEditing = isLegacyScoreEditing(editingId, form)
+
+    const validationError = validateScoreForm(
+      form,
+      activeCampId,
+      isLegacyEditing,
     )
 
-    if (!isLegacyEditing && !form.competition_team_id) {
-      alert('Selecione um Time.')
-      return
-    }
-
-    if (!form.category) {
-      alert('Selecione uma categoria.')
-      return
-    }
-
-    if (!form.points || Number(form.points) <= 0) {
-      alert('Informe uma pontuação válida.')
+    if (validationError) {
+      showError(validationError)
       return
     }
 
     setSaving(true)
 
-    const payload = {
-      tribe_id: isLegacyEditing ? form.tribe_id : null,
-      competition_team_id: isLegacyEditing ? null : form.competition_team_id,
-      participant_id: form.participant_id || null,
-      type: form.type,
-      category: form.category,
-      points: normalizeScoreAmount(form.type, form.points),
-      reason: form.reason.trim() || null,
-      notes: form.notes.trim() || null,
-      camp_id: activeCampId,
-    }
+    const payload = buildScorePayload(form, activeCampId, isLegacyEditing)
 
     const request = editingId
       ? supabase
@@ -336,10 +339,10 @@ export default function Scores() {
     const { error } = await request
 
     if (error) {
-      console.error(error)
+      logError('Scores', error)
       const message =
         `${error.message || ''} ${error.details || ''}`.toLowerCase()
-      alert(
+      showError(
         error.code === '23503' ||
           error.code === '23514' ||
           message.includes('foreign key')
@@ -350,7 +353,7 @@ export default function Scores() {
       return
     }
 
-    setForm(initialForm)
+    setForm(initialScoreForm)
     setEditingId(null)
     await reloadEvents()
     setSaving(false)
@@ -376,9 +379,7 @@ export default function Scores() {
     )
   }, [activeCompetitionTeams, competitionTeams, form.competition_team_id])
 
-  const isLegacyEditing = Boolean(
-    editingId && form.tribe_id && !form.competition_team_id
-  )
+  const isLegacyEditing = isLegacyScoreEditing(editingId, form)
 
   const formParticipants = isLegacyEditing
     ? form.tribe_id
@@ -406,45 +407,7 @@ export default function Scores() {
   }, [filters.type])
 
   const filteredEvents = useMemo(() => {
-    return events.filter((eventItem) => {
-      const search = filters.search.trim().toLowerCase()
-
-      const matchesSearch = search
-        ? eventItem.reason?.toLowerCase().includes(search) ||
-          eventItem.notes?.toLowerCase().includes(search) ||
-          eventItem.category?.toLowerCase().includes(search) ||
-          eventItem.competition_teams?.name?.toLowerCase().includes(search) ||
-          eventItem.tribes?.name?.toLowerCase().includes(search) ||
-          eventItem.participants?.full_name?.toLowerCase().includes(search)
-        : true
-
-      const matchesCompetitionTeam = filters.competition_team_id
-        ? eventItem.competition_team_id === filters.competition_team_id
-        : true
-
-      const matchesTribe = filters.tribe_id
-        ? eventItem.tribe_id === filters.tribe_id
-        : true
-
-      const matchesParticipant = filters.participant_id
-        ? eventItem.participant_id === filters.participant_id
-        : true
-
-      const matchesType = filters.type ? eventItem.type === filters.type : true
-
-      const matchesCategory = filters.category
-        ? eventItem.category === filters.category
-        : true
-
-      return (
-        matchesSearch &&
-        matchesCompetitionTeam &&
-        matchesTribe &&
-        matchesParticipant &&
-        matchesType &&
-        matchesCategory
-      )
-    })
+    return filterScoreEvents(events, filters)
   }, [events, filters])
 
   const columns = [

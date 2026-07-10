@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import { calculateRanking } from '../domain/ranking'
 import { getCampNameStorageKey, useActiveCamp } from '../hooks/useActiveCamp'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 export default function Dashboard() {
   const [competitionTeams, setCompetitionTeams] = useState([])
@@ -60,7 +61,7 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
 
       if (competitionTeamsError || participantsError || eventsError) {
-        console.error(
+        logError('Dashboard',
           competitionTeamsError || participantsError || eventsError
         )
         if (shouldIgnore) return

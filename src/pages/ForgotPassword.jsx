@@ -1,6 +1,7 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -33,7 +34,7 @@ export default function ForgotPassword() {
     setLoading(false)
 
     if (resetError) {
-      console.error(resetError)
+      logError('ForgotPassword', resetError)
       setError('Não foi possível enviar o e-mail de recuperação.')
       return
     }

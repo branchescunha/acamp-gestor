@@ -1,7 +1,8 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuthContext } from '../hooks/useAuth'
+import { logError } from '../utils/logger'
 
 const MIN_PASSWORD_LENGTH = 8
 
@@ -56,7 +57,7 @@ export default function Account() {
     setLoading(false)
 
     if (updateError) {
-      console.error(updateError)
+      logError('Account', updateError)
       setError('Não foi possível alterar a senha.')
       return
     }

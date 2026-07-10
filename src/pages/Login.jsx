@@ -1,8 +1,9 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuthContext } from '../hooks/useAuth'
 import { useUserProfile } from '../hooks/useUserProfile'
+import { logError } from '../utils/logger'
 
 function getSafeRedirectPath(value) {
   if (typeof value !== 'string') return '/admin'
@@ -57,7 +58,7 @@ export default function Login() {
     })
 
     if (loginError) {
-      console.error(loginError)
+      logError('Login', loginError)
       setError('Não foi possível entrar. Verifique o e-mail e a senha.')
       setLoading(false)
       return

@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+﻿import { useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import { useActiveCamp } from '../hooks/useActiveCamp'
+import { useConfirm } from '../hooks/useConfirm'
+import { useToast } from '../hooks/useToast'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const colorOptions = [
   { name: 'Dourado', value: '#eab308' },
@@ -66,6 +69,8 @@ export default function CompetitionTeams() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const { activeCampId } = useActiveCamp()
+  const requestConfirmation = useConfirm()
+  const { showError } = useToast()
 
   useEffect(() => {
     let shouldIgnore = false
@@ -75,13 +80,15 @@ export default function CompetitionTeams() {
 
       const { data, error } = await supabase
         .from('competition_teams')
-        .select('*')
+        .select(
+          'id, camp_id, name, color, symbol, leader_name, status, created_at, updated_at',
+        )
         .eq('camp_id', activeCampId)
         .order('status', { ascending: true })
         .order('name', { ascending: true })
 
       if (error) {
-        console.error(error)
+        logError('CompetitionTeams', error)
         if (shouldIgnore) return
         setLoading(false)
         return
@@ -124,13 +131,15 @@ export default function CompetitionTeams() {
   async function reloadTeams() {
     const { data, error } = await supabase
       .from('competition_teams')
-      .select('*')
+      .select(
+        'id, camp_id, name, color, symbol, leader_name, status, created_at, updated_at',
+      )
       .eq('camp_id', activeCampId)
       .order('status', { ascending: true })
       .order('name', { ascending: true })
 
     if (error) {
-      console.error(error)
+      logError('CompetitionTeams', error)
       return
     }
 
@@ -166,9 +175,12 @@ export default function CompetitionTeams() {
   }
 
   async function handleDelete() {
-    const confirmDelete = confirm(
-      'Tem certeza que deseja excluir este Time? Essa ação não pode ser desfeita.',
-    )
+    const confirmDelete = await requestConfirmation({
+      title: 'Excluir Time',
+      description:
+        'Tem certeza que deseja excluir este Time? Essa ação não pode ser desfeita.',
+      confirmLabel: 'Excluir',
+    })
 
     if (!confirmDelete) return
 
@@ -179,8 +191,8 @@ export default function CompetitionTeams() {
       .eq('camp_id', activeCampId)
 
     if (error) {
-      console.error(error)
-      alert(getDeleteErrorMessage(error))
+      logError('CompetitionTeams', error)
+      showError(getDeleteErrorMessage(error))
       return
     }
 
@@ -199,8 +211,8 @@ export default function CompetitionTeams() {
       .eq('camp_id', activeCampId)
 
     if (error) {
-      console.error(error)
-      alert('Erro ao alterar status do Time.')
+      logError('CompetitionTeams', error)
+      showError('Erro ao alterar status do Time.')
       return
     }
 
@@ -218,14 +230,14 @@ export default function CompetitionTeams() {
     event.preventDefault()
 
     if (!activeCampId) {
-      alert('Selecione um acampamento antes de cadastrar Times.')
+      showError('Selecione um acampamento antes de cadastrar Times.')
       return
     }
 
     const teamName = form.name.trim()
 
     if (!teamName) {
-      alert('Informe o nome do Time.')
+      showError('Informe o nome do Time.')
       return
     }
 
@@ -253,8 +265,8 @@ export default function CompetitionTeams() {
     const { error } = await request
 
     if (error) {
-      console.error(error)
-      alert(getCompetitionTeamErrorMessage(error, 'Erro ao salvar Time.'))
+      logError('CompetitionTeams', error)
+      showError(getCompetitionTeamErrorMessage(error, 'Erro ao salvar Time.'))
       setSaving(false)
       return
     }

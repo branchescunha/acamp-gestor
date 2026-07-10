@@ -5,7 +5,9 @@ import { useAuthContext } from '../hooks/useAuth'
 import { useActiveCamp } from '../hooks/useActiveCamp'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
+import { formatDateOnly } from '../utils/date'
 import { generateSlug, getSlugValidationError } from '../utils/slug'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   name: '',
@@ -51,22 +53,36 @@ export default function Camps() {
     return `${window.location.origin}/${slug}`
   }
 
-  function getCampAdminUrl(slug) {
-    if (!slug || typeof window === 'undefined') return ''
-    return `${window.location.origin}/${slug}/admin`
-  }
-
   const loadCamps = useCallback(async () => {
     setLoading(true)
     setError('')
 
     const { data, error: loadError } = await supabase
       .from('camps')
-      .select('*, organizations(name)')
+      .select(
+        `
+        id,
+        name,
+        church_name,
+        theme,
+        start_date,
+        end_date,
+        status,
+        slug,
+        public_ranking_enabled,
+        organization_id,
+        created_by,
+        created_at,
+        updated_at,
+        organizations (
+          name
+        )
+      `,
+      )
       .order('created_at', { ascending: false })
 
     if (loadError) {
-      console.error(loadError)
+      logError('Camps', loadError)
       setError('Não foi possível carregar seus acampamentos.')
       setLoading(false)
       return
@@ -83,7 +99,7 @@ export default function Camps() {
       .order('name', { ascending: true })
 
     if (loadError) {
-      console.error(loadError)
+      logError('Camps', loadError)
       setError('Não foi possível carregar as organizações.')
       return
     }
@@ -186,7 +202,7 @@ export default function Camps() {
       setSuccess('Link público copiado.')
       setError('')
     } catch (copyError) {
-      console.error(copyError)
+      logError('Camps', copyError)
       setError('Não foi possível copiar o link automaticamente.')
     }
   }
@@ -225,7 +241,7 @@ export default function Camps() {
           .from('camps')
           .update(payload)
           .eq('id', editingId)
-          .select()
+          .select('id, name, slug')
           .single()
       : supabase
           .from('camps')
@@ -233,13 +249,13 @@ export default function Camps() {
             ...payload,
             created_by: session?.user?.id,
           })
-          .select()
+          .select('id, name, slug')
           .single()
 
     const { data: savedCamp, error: saveError } = await request
 
     if (saveError) {
-      console.error(saveError)
+      logError('Camps', saveError)
       setError(
         saveError.code === '23505'
           ? 'Essa URL pública já está em uso. Escolha outra.'
@@ -260,11 +276,6 @@ export default function Camps() {
         : 'Acampamento criado com sucesso.',
     )
     setSaving(false)
-  }
-
-  function formatDate(value) {
-    if (!value) return '-'
-    return new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR')
   }
 
   const publicRankingPreview = getPublicRankingUrl(form.slug)
@@ -314,7 +325,7 @@ export default function Camps() {
       label: 'Datas',
       render: (camp) => (
         <span className="text-zinc-400">
-          {formatDate(camp.start_date)} até {formatDate(camp.end_date)}
+          {formatDateOnly(camp.start_date)} até {formatDateOnly(camp.end_date)}
         </span>
       ),
     },
@@ -346,19 +357,8 @@ export default function Camps() {
               Ver ranking
             </a>
 
-            <a
-              href={`/${camp.slug}/admin`}
-              className="text-sm font-semibold text-zinc-300 hover:text-white"
-            >
-              Abrir painel
-            </a>
-
             <span className="text-xs text-zinc-500">
               Ranking: {getPublicRankingUrl(camp.slug)}
-            </span>
-
-            <span className="text-xs text-zinc-500">
-              Painel: {getCampAdminUrl(camp.slug)}
             </span>
 
             <button
@@ -443,8 +443,8 @@ export default function Camps() {
               </p>
               <h2 className="mt-2 text-xl font-bold">{selectedCamp.name}</h2>
               <p className="mt-1 text-sm text-yellow-100/80">
-                As telas operacionais antigas em /admin usam este acampamento
-                como contexto.
+                As telas operacionais em /admin usam este acampamento como
+                contexto.
               </p>
             </div>
 

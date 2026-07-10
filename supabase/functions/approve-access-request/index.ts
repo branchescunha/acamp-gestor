@@ -1,20 +1,49 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+const allowedOrigins = new Set([
+  'https://acamp-gestor.vercel.app',
+  'http://localhost:4000',
+])
+
+const baseCorsHeaders = {
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-function jsonResponse(body: Record<string, unknown>, status = 200) {
+function getCorsHeaders(request: Request) {
+  const origin = request.headers.get('Origin')?.trim() || ''
+
+  return {
+    ...baseCorsHeaders,
+    ...(origin && allowedOrigins.has(origin)
+      ? { 'Access-Control-Allow-Origin': origin }
+      : {}),
+    Vary: 'Origin',
+  }
+}
+
+function jsonResponse(
+  request: Request,
+  body: Record<string, unknown>,
+  status = 200,
+) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
+      ...getCorsHeaders(request),
       'Content-Type': 'application/json',
     },
   })
+}
+
+function logSanitizedError(context: string, error: unknown) {
+  const errorInfo =
+    error instanceof Error
+      ? { name: error.name, message: error.message }
+      : { message: String(error) }
+
+  console.error(`[approve-access-request] ${context}`, errorInfo)
 }
 
 function getBearerToken(request: Request) {
@@ -234,11 +263,15 @@ async function createOrUpdateInvitation(
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: getCorsHeaders(request) })
   }
 
   if (request.method !== 'POST') {
-    return jsonResponse({ success: false, message: 'Método não permitido.' }, 405)
+    return jsonResponse(
+      request,
+      { success: false, message: 'Método não permitido.' },
+      405,
+    )
   }
 
   try {
@@ -247,6 +280,7 @@ Deno.serve(async (request) => {
 
     if (!supabaseUrl || !supabaseAdminKey) {
       return jsonResponse(
+        request,
         {
           success: false,
           message: 'Configuração da Edge Function incompleta.',
@@ -259,6 +293,7 @@ Deno.serve(async (request) => {
 
     if (!token) {
       return jsonResponse(
+        request,
         { success: false, message: 'Token de autenticação obrigatório.' },
         401,
       )
@@ -278,6 +313,7 @@ Deno.serve(async (request) => {
 
     if (callerError || !caller) {
       return jsonResponse(
+        request,
         { success: false, message: 'Sessão inválida ou expirada.' },
         401,
       )
@@ -299,6 +335,7 @@ Deno.serve(async (request) => {
       callerProfile.status !== 'active'
     ) {
       return jsonResponse(
+        request,
         {
           success: false,
           message: 'Apenas ADMIN ativo pode aprovar solicitações.',
@@ -313,6 +350,7 @@ Deno.serve(async (request) => {
 
     if (!requestId) {
       return jsonResponse(
+        request,
         { success: false, message: 'requestId é obrigatório.' },
         400,
       )
@@ -330,6 +368,7 @@ Deno.serve(async (request) => {
 
     if (!accessRequest) {
       return jsonResponse(
+        request,
         { success: false, message: 'Solicitação não encontrada.' },
         404,
       )
@@ -337,6 +376,7 @@ Deno.serve(async (request) => {
 
     if (accessRequest.status !== 'pending') {
       return jsonResponse(
+        request,
         {
           success: false,
           message: 'Esta solicitação não está pendente de aprovação.',
@@ -353,6 +393,7 @@ Deno.serve(async (request) => {
 
     if (!normalizedRequest.name || !normalizedRequest.email) {
       return jsonResponse(
+        request,
         {
           success: false,
           message: 'Solicitação sem nome ou e-mail válido.',
@@ -381,6 +422,7 @@ Deno.serve(async (request) => {
 
     if (existingProfile?.role === 'admin') {
       return jsonResponse(
+        request,
         {
           success: false,
           message:
@@ -392,6 +434,7 @@ Deno.serve(async (request) => {
 
     if (existingProfile && existingProfile.role !== 'gestor') {
       return jsonResponse(
+        request,
         {
           success: false,
           message:
@@ -485,6 +528,7 @@ Deno.serve(async (request) => {
 
     if (!reviewedRequest) {
       return jsonResponse(
+        request,
         {
           success: false,
           message:
@@ -494,7 +538,7 @@ Deno.serve(async (request) => {
       )
     }
 
-    return jsonResponse({
+    return jsonResponse(request, {
       success: true,
       message:
         'Solicitação aprovada. Usuário, profile e vínculo com organização foram criados automaticamente.',
@@ -510,9 +554,10 @@ Deno.serve(async (request) => {
       accessRequest: reviewedRequest,
     })
   } catch (error) {
-    console.error(error)
+    logSanitizedError('approval failed', error)
 
     return jsonResponse(
+      request,
       {
         success: false,
         message: 'Não foi possível aprovar automaticamente esta solicitação.',

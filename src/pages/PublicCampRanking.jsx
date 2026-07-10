@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { calculateRanking } from '../domain/ranking'
 import { supabase } from '../lib/supabase'
 import { isValidSlug } from '../utils/slug'
+import { logError } from '../utils/logger'
 
 export default function PublicCampRanking() {
   const { campSlug = '' } = useParams()
@@ -37,7 +38,7 @@ export default function PublicCampRanking() {
       if (shouldIgnore) return
 
       if (campError) {
-        console.error(campError)
+        logError('PublicCampRanking', campError)
         setNotFound(true)
         setLoading(false)
         return
@@ -72,7 +73,7 @@ export default function PublicCampRanking() {
       if (shouldIgnore) return
 
       if (teamsError || eventsError || participantsError) {
-        console.error(teamsError || eventsError || participantsError)
+        logError('PublicCampRanking', teamsError || eventsError || participantsError)
         setNotFound(true)
         setLoading(false)
         return

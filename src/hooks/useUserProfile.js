@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useAuthContext } from './useAuth'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 export function useUserProfile() {
   const { session, loadingAuth } = useAuthContext()
@@ -24,7 +25,7 @@ export function useUserProfile() {
       if (!isMounted) return
 
       if (profileError) {
-        console.error(profileError)
+        logError('useUserProfile', profileError)
         setProfile(null)
         setError('Não foi possível carregar seu perfil de acesso.')
         setLoadingProfile(false)

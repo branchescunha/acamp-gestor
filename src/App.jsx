@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import {
   BrowserRouter,
   Navigate,
@@ -7,35 +8,44 @@ import {
   useParams,
 } from 'react-router-dom'
 
-import PublicCampRanking from './pages/PublicCampRanking'
 import CampAdminRoute from './components/CampAdminRoute'
 import AdminOnlyRoute from './components/AdminOnlyRoute'
 import RequireActiveCamp from './components/RequireActiveCamp'
-import LandingPage from './pages/LandingPage'
-import Login from './pages/Login'
-import Gestor from './pages/Gestor'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
-import RequestAccess from './pages/RequestAccess'
-import AcceptInvitation from './pages/AcceptInvitation'
-import Admin from './pages/Admin'
-import Account from './pages/Account'
-import AccessRequests from './pages/AccessRequests'
-import AdminDashboard from './pages/AdminDashboard'
-import Camps from './pages/Camps'
-import Organizations from './pages/Organizations'
-import OrganizationMembers from './pages/OrganizationMembers'
-import Users from './pages/Users'
-import Invitations from './pages/Invitations'
-import Dashboard from './pages/Dashboard'
-import Tribes from './pages/Tribes'
-import CompetitionTeams from './pages/CompetitionTeams'
-import Participants from './pages/Participants'
-import Scores from './pages/Scores'
-import History from './pages/History'
-import Export from './pages/Export'
-import Gymkhana from './pages/Gymkhana'
-import Inspections from './pages/Inspections'
+
+const PublicCampRanking = lazy(() => import('./pages/PublicCampRanking'))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
+const Login = lazy(() => import('./pages/Login'))
+const Gestor = lazy(() => import('./pages/Gestor'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const RequestAccess = lazy(() => import('./pages/RequestAccess'))
+const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation'))
+const Admin = lazy(() => import('./pages/Admin'))
+const Account = lazy(() => import('./pages/Account'))
+const AccessRequests = lazy(() => import('./pages/AccessRequests'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const Camps = lazy(() => import('./pages/Camps'))
+const Organizations = lazy(() => import('./pages/Organizations'))
+const OrganizationMembers = lazy(() => import('./pages/OrganizationMembers'))
+const Users = lazy(() => import('./pages/Users'))
+const Invitations = lazy(() => import('./pages/Invitations'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const CampGroups = lazy(() => import('./pages/CampGroups'))
+const CompetitionTeams = lazy(() => import('./pages/CompetitionTeams'))
+const Participants = lazy(() => import('./pages/Participants'))
+const Scores = lazy(() => import('./pages/Scores'))
+const History = lazy(() => import('./pages/History'))
+const Export = lazy(() => import('./pages/Export'))
+const Gymkhana = lazy(() => import('./pages/Gymkhana'))
+const Inspections = lazy(() => import('./pages/Inspections'))
+
+function RouteLoading() {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-5 text-white">
+      <p className="text-sm text-zinc-400">Carregando...</p>
+    </main>
+  )
+}
 
 function LegacyCampAdminRedirect() {
   const { campSlug = '' } = useParams()
@@ -56,8 +66,9 @@ function LegacyCampAdminRedirect() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
+      <Suspense fallback={<RouteLoading />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
 
         <Route path="/login" element={<Login />} />
 
@@ -121,11 +132,13 @@ export default function App() {
             path="account"
             element={<Navigate to="/admin/conta" replace />}
           />
+          {/* Legacy compatibility for /admin/tribos. */}
+          <Route path="tribos" element={<Navigate to="/admin/equipes" replace />} />
           <Route
-            path="tribos"
+            path="equipes"
             element={
               <RequireActiveCamp>
-                <Tribes />
+                <CampGroups />
               </RequireActiveCamp>
             }
           />
@@ -192,7 +205,7 @@ export default function App() {
         <Route path="/:campSlug/gestor" element={<CampAdminRoute />}>
           <Route index element={<Dashboard />} />
           <Route path="conta" element={<Account />} />
-          <Route path="equipes" element={<Tribes />} />
+          <Route path="equipes" element={<CampGroups />} />
           <Route path="times" element={<CompetitionTeams />} />
           <Route path="participantes" element={<Participants />} />
           <Route path="pontuacao" element={<Scores />} />
@@ -206,8 +219,9 @@ export default function App() {
 
         <Route path="/:campSlug" element={<PublicCampRanking />} />
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

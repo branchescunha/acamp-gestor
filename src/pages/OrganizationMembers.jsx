@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
 import RoleAccessNotice from '../components/RoleAccessNotice'
 import { supabase } from '../lib/supabase'
+import { logError } from '../utils/logger'
 
 const initialForm = {
   email: '',
@@ -48,7 +49,7 @@ export default function OrganizationMembers() {
       .order('created_at', { ascending: true })
 
     if (membersError) {
-      console.error(membersError)
+      logError('OrganizationMembers', membersError)
       setError('Não foi possível carregar os membros da organização.')
       return
     }
@@ -69,7 +70,7 @@ export default function OrganizationMembers() {
       .maybeSingle()
 
     if (organizationError || !organizationData) {
-      if (organizationError) console.error(organizationError)
+      if (organizationError) logError('OrganizationMembers', organizationError)
       setAccessDenied(true)
       setLoading(false)
       return
@@ -83,7 +84,7 @@ export default function OrganizationMembers() {
     )
 
     if (permissionError) {
-      console.error(permissionError)
+      logError('OrganizationMembers', permissionError)
       setCanManageMembers(false)
     } else {
       setCanManageMembers(Boolean(permissionData))
@@ -170,7 +171,7 @@ export default function OrganizationMembers() {
     )
 
     if (saveError) {
-      console.error(saveError)
+      logError('OrganizationMembers', saveError)
       setError('Não foi possível adicionar o membro. Verifique se o profile existe e está ativo.')
       setSaving(false)
       return
@@ -206,7 +207,7 @@ export default function OrganizationMembers() {
       .single()
 
     if (updateError) {
-      console.error(updateError)
+      logError('OrganizationMembers', updateError)
       setError(
         'Não foi possível alterar este membro. Verifique se a organização continuará com pelo menos um owner ativo.',
       )
