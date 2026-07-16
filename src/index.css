@@ -12,3 +12,21 @@ body {
   color: #f5f5f5;
   font-family: Inter, system-ui, sans-serif;
 }
+
+input[type='date'] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 48px;
+  color-scheme: dark;
+}
+
+input[type='date']::-webkit-date-and-time-value {
+  min-height: 1.5em;
+  text-align: left;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator {
+  opacity: 0.75;
+}

@@ -11,7 +11,6 @@ import {
   Swords,
   TentTree,
   Trophy,
-  UserCog,
   Users,
 } from 'lucide-react'
 
@@ -50,7 +49,6 @@ const features = [
   ['Ranking público', Trophy],
   ['Exportação de dados', Download],
   ['Gestão por organizações', Building2],
-  ['Membros gestores', UserCog],
 ]
 
 const benefits = [
@@ -61,6 +59,7 @@ const benefits = [
   'Controle para gestores',
   'Visão geral para administradores',
   'Histórico e exportação',
+  'Dados centralizados por acampamento',
 ]
 
 const steps = [
@@ -109,22 +108,22 @@ export default function LandingPage() {
           <div className="h-full w-full bg-[linear-gradient(90deg,rgba(250,204,21,0.08)_1px,transparent_1px),linear-gradient(180deg,rgba(250,204,21,0.06)_1px,transparent_1px)] bg-[size:72px_72px]" />
         </div>
 
-        <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <Link to="/" className="text-lg font-black tracking-tight">
+        <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-3">
+          <Link to="/" className="shrink-0 text-base font-black tracking-tight sm:text-lg">
             AcampGestor
           </Link>
 
-          <nav className="flex items-center gap-3 text-sm">
+          <nav className="flex min-w-0 items-center gap-2 text-xs sm:gap-3 sm:text-sm">
             <Link
               to="/login"
-              className="rounded-xl px-4 py-3 text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
+              className="whitespace-nowrap rounded-xl px-3 py-2 text-zinc-300 transition hover:bg-zinc-900 hover:text-white sm:px-4 sm:py-3"
             >
               Entrar
             </Link>
 
             <Link
               to="/solicitar-acesso"
-              className="rounded-xl bg-yellow-500 px-4 py-3 font-semibold text-zinc-950 transition hover:bg-yellow-400"
+              className="whitespace-nowrap rounded-xl bg-yellow-500 px-3 py-2 font-semibold text-zinc-950 transition hover:bg-yellow-400 sm:px-4 sm:py-3"
             >
               Solicitar acesso
             </Link>
@@ -146,9 +145,9 @@ export default function LandingPage() {
               acampamentos de forma simples, organizada e visual.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <PrimaryCta />
-              <SecondaryCta />
+            <div className="mt-8 grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-3 sm:flex sm:flex-row">
+              <PrimaryCta className="whitespace-nowrap px-3 py-3 text-sm sm:px-6 sm:py-4 sm:text-base" />
+              <SecondaryCta className="whitespace-nowrap px-3 py-3 text-sm sm:px-6 sm:py-4 sm:text-base" />
             </div>
           </div>
 
@@ -158,7 +157,7 @@ export default function LandingPage() {
                 <p className="text-xs uppercase tracking-[0.25em] text-yellow-500">
                   Ranking público
                 </p>
-                <h2 className="mt-2 text-2xl font-bold">Acampamento 2026</h2>
+                <h2 className="mt-2 text-2xl font-bold">Acampamento Exemplo</h2>
               </div>
               <Trophy className="text-yellow-400" size={28} />
             </div>
@@ -167,16 +166,16 @@ export default function LandingPage() {
               {rankingPreview.map((team, index) => (
                 <div
                   key={team.name}
-                  className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 text-xl font-black text-yellow-500">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="w-8 shrink-0 text-xl font-black text-yellow-500">
                       #{index + 1}
                     </span>
-                    <span className={`h-10 w-10 rounded-xl ${team.color}`} />
-                    <strong>{team.name}</strong>
+                    <span className={`h-10 w-10 shrink-0 rounded-xl ${team.color}`} />
+                    <strong className="truncate">{team.name}</strong>
                   </div>
-                  <span className="text-xl font-black text-green-400">
+                  <span className="whitespace-nowrap text-lg font-black text-green-400 sm:text-xl">
                     {team.points} pts
                   </span>
                 </div>
@@ -210,7 +209,7 @@ export default function LandingPage() {
             Feito para quem organiza eventos com grupos e Times.
           </h2>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-4 xl:grid-cols-4">
             {audiences.map((audience) => {
               const Icon = audience.icon
 
@@ -242,7 +241,7 @@ export default function LandingPage() {
             </h2>
           </div>
 
-          <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-10 grid grid-cols-2 gap-3 lg:grid-cols-5">
             {features.map(([feature, Icon]) => (
               <div
                 key={feature}
@@ -271,14 +270,14 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             {benefits.map((benefit) => (
               <div
                 key={benefit}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5"
+                className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-5"
               >
                 <span className="text-yellow-400">•</span>
-                <span className="ml-3 font-semibold">{benefit}</span>
+                <span className="ml-2 text-sm font-semibold sm:ml-3 sm:text-base">{benefit}</span>
               </div>
             ))}
           </div>
@@ -329,16 +328,16 @@ export default function LandingPage() {
             {rankingPreview.map((team, index) => (
               <div
                 key={team.name}
-                className="flex items-center justify-between gap-4 border-b border-zinc-800 py-4 last:border-b-0"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-zinc-800 py-4 last:border-b-0"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-lg font-black text-yellow-500">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="shrink-0 text-lg font-black text-yellow-500">
                     #{index + 1}
                   </span>
-                  <span className={`h-9 w-9 rounded-xl ${team.color}`} />
-                  <span className="font-semibold">{team.name}</span>
+                  <span className={`h-9 w-9 shrink-0 rounded-xl ${team.color}`} />
+                  <span className="truncate font-semibold">{team.name}</span>
                 </div>
-                <strong>{team.points} pts</strong>
+                <strong className="whitespace-nowrap">{team.points} pts</strong>
               </div>
             ))}
           </div>
@@ -354,9 +353,9 @@ export default function LandingPage() {
             Solicite acesso para avaliar o uso da plataforma ou entre no painel
             se sua conta administrativa já foi liberada.
           </p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <PrimaryCta />
-            <SecondaryCta />
+          <div className="mt-8 grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] justify-center gap-3 sm:flex sm:flex-row">
+            <PrimaryCta className="whitespace-nowrap px-3 py-3 text-sm sm:px-6 sm:py-4 sm:text-base" />
+            <SecondaryCta className="whitespace-nowrap px-3 py-3 text-sm sm:px-6 sm:py-4 sm:text-base" />
           </div>
         </div>
       </section>
