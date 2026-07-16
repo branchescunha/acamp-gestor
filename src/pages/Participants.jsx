@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ActiveCampNotice from '../components/ActiveCampNotice'
 import PageHeader from '../components/PageHeader'
 import ResponsiveTable from '../components/ResponsiveTable'
@@ -509,13 +509,18 @@ export default function Participants() {
             className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           />
 
-          <input
-            name="birth_date"
-            type="date"
-            value={form.birth_date}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
-          />
+          <label className="block min-w-0">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Data de nascimento
+            </span>
+            <input
+              name="birth_date"
+              type="date"
+              value={form.birth_date}
+              onChange={handleChange}
+              className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            />
+          </label>
 
           <input
             name="church"

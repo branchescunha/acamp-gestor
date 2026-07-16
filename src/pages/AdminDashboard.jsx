@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Building2,
@@ -237,21 +237,21 @@ export default function AdminDashboard() {
         </p>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-3">
         {metricCards.map((metric) => {
           const Icon = metric.icon
 
           return (
             <div
               key={metric.key}
-              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6"
+              className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6"
             >
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-sm text-zinc-400">{metric.label}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-zinc-400 sm:text-sm">{metric.label}</p>
                 <Icon size={20} className="text-yellow-400" />
               </div>
 
-              <strong className="mt-4 block text-3xl">
+              <strong className="mt-3 block text-2xl sm:mt-4 sm:text-3xl">
                 {metrics[metric.key]}
               </strong>
             </div>
@@ -259,7 +259,7 @@ export default function AdminDashboard() {
         })}
       </div>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {shortcuts.map((shortcut) => {
           const Icon = shortcut.icon
 
@@ -280,7 +280,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-3">
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
           <h2 className="text-xl font-bold">Últimas organizações</h2>
 
           {organizations.length === 0 ? (
@@ -309,7 +309,7 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
           <h2 className="text-xl font-bold">Últimos acampamentos</h2>
 
           {camps.length === 0 ? (
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+        <section className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4 sm:p-6">
           <h2 className="text-xl font-bold">Últimas solicitações</h2>
 
           {requests.length === 0 ? (

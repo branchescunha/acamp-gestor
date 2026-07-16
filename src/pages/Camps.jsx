@@ -522,21 +522,31 @@ export default function Camps() {
             </p>
           </div>
 
-          <input
-            name="start_date"
-            value={form.start_date}
-            onChange={handleChange}
-            type="date"
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
-          />
+          <label className="block min-w-0">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Data de início
+            </span>
+            <input
+              name="start_date"
+              value={form.start_date}
+              onChange={handleChange}
+              type="date"
+              className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            />
+          </label>
 
-          <input
-            name="end_date"
-            value={form.end_date}
-            onChange={handleChange}
-            type="date"
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
-          />
+          <label className="block min-w-0">
+            <span className="mb-2 block text-sm font-medium text-zinc-300">
+              Data de término
+            </span>
+            <input
+              name="end_date"
+              value={form.end_date}
+              onChange={handleChange}
+              type="date"
+              className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            />
+          </label>
 
           <select
             name="status"

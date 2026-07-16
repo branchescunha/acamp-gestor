@@ -1,12 +1,25 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { LogOut, TentTree } from 'lucide-react'
+import { CheckCircle2, CircleDashed, LogOut, TentTree } from 'lucide-react'
 import { useActiveCamp } from '../hooks/useActiveCamp'
 import { useAuthContext } from '../hooks/useAuth'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { supabase } from '../lib/supabase'
 import { logError } from '../utils/logger'
 
+const campStatusLabels = {
+  active: 'Ativo',
+  draft: 'Rascunho',
+  archived: 'Arquivado',
+}
+
+function getCampStatusLabel(status) {
+  return campStatusLabels[status] || 'Status não informado'
+}
+
+function getCampStatusIcon(status) {
+  return status === 'active' ? CheckCircle2 : CircleDashed
+}
 export default function Gestor() {
   const location = useLocation()
   const { session, loadingAuth } = useAuthContext()
@@ -162,8 +175,13 @@ export default function Gestor() {
                   <span className="mt-4 block text-sm text-zinc-400">
                     {camp.theme || 'Sem tema informado'}
                   </span>
-                  <span className="mt-3 block text-xs uppercase tracking-[0.2em] text-zinc-600">
-                    {camp.status || 'status não informado'}
+                  <span className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-zinc-500">
+                    {(() => {
+                      const StatusIcon = getCampStatusIcon(camp.status)
+
+                      return <StatusIcon size={14} />
+                    })()}
+                    {getCampStatusLabel(camp.status)}
                   </span>
                 </>
               )
