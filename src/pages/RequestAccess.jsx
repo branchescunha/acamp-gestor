@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { logError } from '../utils/logger'
@@ -70,13 +70,13 @@ export default function RequestAccess() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 p-6 text-white">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-8"
+        className="w-full max-w-md rounded-3xl border border-zinc-800 bg-zinc-900 p-6 sm:p-8"
       >
         <p className="text-xs uppercase tracking-[0.3em] text-yellow-500">
           AcampGestor
         </p>
 
-        <h1 className="mt-4 text-4xl font-bold leading-tight">
+        <h1 className="mt-4 text-3xl font-bold leading-tight sm:text-4xl">
           Solicitar acesso
         </h1>
 
@@ -181,14 +181,14 @@ export default function RequestAccess() {
 
         <Link
           to="/"
-          className="mt-6 block text-center text-sm text-zinc-400 hover:text-yellow-500"
+          className="mt-5 block text-center text-sm font-medium text-zinc-300 hover:text-yellow-500"
         >
           Voltar para o início
         </Link>
 
         <Link
           to="/login"
-          className="mt-4 block text-center text-sm text-zinc-400 hover:text-yellow-500"
+          className="mt-3 block text-center text-sm text-zinc-400 hover:text-yellow-500"
         >
           Entrar
         </Link>

@@ -461,19 +461,19 @@ export default function Camps() {
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 md:p-6"
+        className="w-full min-w-0 max-w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-5 md:p-6"
       >
         <h2 className="text-xl font-bold">
           {editingId ? 'Editar acampamento' : 'Criar acampamento'}
         </h2>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-6 grid w-full min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2">
           <input
             name="name"
             value={form.name}
             onChange={handleChange}
             placeholder="Nome do acampamento"
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           />
 
           <input
@@ -481,7 +481,7 @@ export default function Camps() {
             value={form.church_name}
             onChange={handleChange}
             placeholder="Igreja/organização"
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           />
 
           <input
@@ -489,14 +489,14 @@ export default function Camps() {
             value={form.theme}
             onChange={handleChange}
             placeholder="Tema, opcional"
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           />
 
           <select
             name="organization_id"
             value={form.organization_id}
             onChange={handleChange}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
             <option value="">Sem organização</option>
             {organizations.map((organization) => (
@@ -506,16 +506,16 @@ export default function Camps() {
             ))}
           </select>
 
-          <div className="xl:col-span-2">
+          <div className="min-w-0">
             <input
               name="slug"
               value={form.slug}
               onChange={handleChange}
               placeholder="url-publica-do-acampamento"
-              className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+              className="w-full min-w-0 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
             />
 
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="mt-2 break-all text-xs leading-relaxed text-zinc-500">
               {publicRankingPreview
                 ? publicRankingPreview
                 : 'A URL pública será gerada a partir do nome do acampamento.'}
@@ -552,43 +552,43 @@ export default function Camps() {
             name="status"
             value={form.status}
             onChange={handleChange}
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
+            className="w-full min-w-0 self-end rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none focus:border-yellow-500"
           >
             <option value="draft">Rascunho</option>
             <option value="active">Ativo</option>
             <option value="archived">Arquivado</option>
           </select>
 
-          <label className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
+          <label className="flex min-w-0 items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-300">
             <input
               type="checkbox"
               name="public_ranking_enabled"
               checked={form.public_ranking_enabled}
               onChange={handleChange}
-              className="h-4 w-4"
+              className="h-4 w-4 shrink-0"
             />
-            Ranking público ativo
+            <span className="min-w-0 leading-tight">Ranking público ativo</span>
           </label>
-        </div>
 
-        <div className="mt-6 flex flex-col justify-end gap-3 sm:flex-row">
-          {editingId && (
+          <div className="flex min-w-0 flex-col justify-end gap-3 sm:flex-row md:items-end md:justify-end">
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="w-full rounded-xl border border-zinc-700 px-6 py-3 font-semibold text-zinc-300 transition hover:bg-zinc-800 sm:w-auto"
+              >
+                Cancelar
+              </button>
+            )}
+
             <button
-              type="button"
-              onClick={resetForm}
-              className="rounded-xl border border-zinc-700 px-6 py-3 font-semibold text-zinc-300 transition hover:bg-zinc-800"
+              type="submit"
+              disabled={saving}
+              className="w-full rounded-xl bg-yellow-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
-              Cancelar
+              {saving ? 'Salvando...' : 'Salvar'}
             </button>
-          )}
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-xl bg-yellow-500 px-6 py-3 font-semibold text-zinc-950 transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? 'Salvando...' : 'Salvar'}
-          </button>
+          </div>
         </div>
       </form>
 
