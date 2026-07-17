@@ -166,14 +166,14 @@ export default function LandingPage() {
               {rankingPreview.map((team, index) => (
                 <div
                   key={team.name}
-                  className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4"
+                  className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:p-4"
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="w-8 shrink-0 text-xl font-black text-yellow-500">
                       #{index + 1}
                     </span>
                     <span className={`h-10 w-10 shrink-0 rounded-xl ${team.color}`} />
-                    <strong className="truncate">{team.name}</strong>
+                    <strong className="min-w-0 break-words text-sm leading-tight sm:text-base">{team.name}</strong>
                   </div>
                   <span className="whitespace-nowrap text-lg font-black text-green-400 sm:text-xl">
                     {team.points} pts
@@ -182,18 +182,18 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <div className="mt-5 grid grid-cols-3 gap-3 text-center text-sm">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                <strong className="block text-xl">8</strong>
-                <span className="text-zinc-400">times</span>
+            <div className="mt-5 grid min-w-0 grid-cols-3 gap-2 text-center text-xs sm:gap-3 sm:text-sm">
+              <div className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:p-4">
+                <strong className="block text-lg leading-tight sm:text-xl">8</strong>
+                <span className="block break-words leading-tight text-zinc-400">times</span>
               </div>
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                <strong className="block text-xl">142</strong>
-                <span className="text-zinc-400">participantes</span>
+              <div className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:p-4">
+                <strong className="block text-lg leading-tight sm:text-xl">142</strong>
+                <span className="block break-words leading-tight text-zinc-400">participantes</span>
               </div>
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-                <strong className="block text-xl">24</strong>
-                <span className="text-zinc-400">lançamentos</span>
+              <div className="min-w-0 rounded-2xl border border-zinc-800 bg-zinc-950 p-3 sm:p-4">
+                <strong className="block text-lg leading-tight sm:text-xl">24</strong>
+                <span className="block break-words leading-tight text-zinc-400">lançamentos</span>
               </div>
             </div>
           </div>
@@ -328,14 +328,14 @@ export default function LandingPage() {
             {rankingPreview.map((team, index) => (
               <div
                 key={team.name}
-                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-zinc-800 py-4 last:border-b-0"
+                className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-zinc-800 py-4 last:border-b-0"
               >
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="shrink-0 text-lg font-black text-yellow-500">
                     #{index + 1}
                   </span>
                   <span className={`h-9 w-9 shrink-0 rounded-xl ${team.color}`} />
-                  <span className="truncate font-semibold">{team.name}</span>
+                  <span className="min-w-0 break-words text-sm font-semibold leading-tight sm:text-base">{team.name}</span>
                 </div>
                 <strong className="whitespace-nowrap">{team.points} pts</strong>
               </div>

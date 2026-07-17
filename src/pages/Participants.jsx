@@ -485,13 +485,13 @@ export default function Participants() {
 
       <form
         onSubmit={handleSubmit}
-        className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 md:p-6"
+        className="w-full min-w-0 max-w-full rounded-2xl border border-zinc-800 bg-zinc-900 p-5 md:p-6"
       >
         <h2 className="text-xl font-bold">
           {editingId ? 'Editar participante' : 'Novo participante'}
         </h2>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid w-full min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <input
             name="full_name"
             value={form.full_name}
@@ -742,7 +742,7 @@ export default function Participants() {
           </button>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="mt-6 grid w-full min-w-0 max-w-full grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <input
             name="search"
             value={filters.search}
