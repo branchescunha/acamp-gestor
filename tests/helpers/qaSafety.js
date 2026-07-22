@@ -1,7 +1,7 @@
-﻿import process from 'node:process'
+import process from 'node:process'
 
 const productionProjectRefs = new Set(['zuxndxchkeynvjqustxk'])
-const productionHostFragments = ['acamp-gestor.vercel.app', 'acampgestor', 'zuxndxchkeynvjqustxk']
+const productionHostFragments = ['acampgestor.vercel.app', 'acamp-gestor.vercel.app', 'tribes-tournament.vercel.app', 'acampgestor', 'zuxndxchkeynvjqustxk']
 
 export function assertSafeIntegrationEnvironment({ testEnv = '', supabaseUrl = '', projectRef = '', qaRunId = '', allowRemoteCleanup = false } = {}) {
   if (!qaRunId.startsWith('QA-')) throw new Error('Integration tests require a QA-* run id.')

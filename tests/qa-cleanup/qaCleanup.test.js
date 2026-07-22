@@ -73,7 +73,17 @@ test('bloqueia ambiente de produção por project ref e URL', () => {
   )
 
   assert.throws(
+    () => assertSafeCleanupConfig(createConfig({ supabaseUrl: 'https://acampgestor.vercel.app' })),
+    /produção/,
+  )
+
+  assert.throws(
     () => assertSafeCleanupConfig(createConfig({ supabaseUrl: 'https://acamp-gestor.vercel.app' })),
+    /produção/,
+  )
+
+  assert.throws(
+    () => assertSafeCleanupConfig(createConfig({ supabaseUrl: 'https://tribes-tournament.vercel.app' })),
     /produção/,
   )
 })

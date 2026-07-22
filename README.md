@@ -4,7 +4,7 @@ Plataforma web para gestão de acampamentos, retiros e eventos, com controle de 
 
 O AcampGestor separa a administração da plataforma, a gestão operacional de cada acampamento e a visualização pública dos rankings. A aplicação foi estruturada para uso por igrejas, escolas e organizações que precisam organizar eventos com múltiplos responsáveis, dados isolados por acampamento e regras de acesso bem definidas.
 
-Produção: https://acamp-gestor.vercel.app
+Produção: https://acampgestor.vercel.app
 
 ## Demonstração
 

@@ -1,10 +1,11 @@
-﻿export const productionProjectRefs = Object.freeze([
+export const productionProjectRefs = Object.freeze([
   'zuxndxchkeynvjqustxk',
 ])
 
 export const productionUrlFragments = Object.freeze([
   'https://acamp-gestor.vercel.app',
   'https://acampgestor.vercel.app',
+  'https://tribes-tournament.vercel.app',
   'zuxndxchkeynvjqustxk',
 ])
 

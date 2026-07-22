@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const allowedOrigins = new Set([
+  'https://acampgestor.vercel.app',
   'https://acamp-gestor.vercel.app',
   'http://localhost:4000',
 ])
@@ -245,9 +246,9 @@ async function createOrUpdateInvitation(
 
   const query = existingInvitation?.id
     ? supabaseAdmin
-        .from('invitations')
-        .update(invitationPayload)
-        .eq('id', existingInvitation.id)
+      .from('invitations')
+      .update(invitationPayload)
+      .eq('id', existingInvitation.id)
     : supabaseAdmin.from('invitations').insert(invitationPayload)
 
   const { data: invitation, error: invitationError } = await query
