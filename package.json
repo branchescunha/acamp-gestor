@@ -7,9 +7,12 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node --test src/domain/__tests__/*.test.js src/utils/__tests__/*.test.js src/features/export/__tests__/*.test.js src/features/participants/__tests__/*.test.js src/features/scores/__tests__/*.test.js",
+    "test": "node --test src/domain/__tests__/*.test.js src/utils/__tests__/*.test.js src/features/export/__tests__/*.test.js src/features/participants/__tests__/*.test.js src/features/scores/__tests__/*.test.js tests/qa-cleanup/*.test.js",
     "test:integration": "node --test tests/integration/*.test.js",
     "test:all": "npm test && npm run test:integration",
+    "qa:inventory": "node scripts/qa-cleanup/cli.js inventory",
+    "qa:cleanup:dry-run": "node scripts/qa-cleanup/cli.js dry-run",
+    "qa:cleanup": "node scripts/qa-cleanup/cli.js cleanup",
     "preview": "vite preview",
     "format": "prettier . --write"
   },

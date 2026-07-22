@@ -1,0 +1,17 @@
+﻿export const officialV1ScreenshotPlan = Object.freeze([
+  'Landing',
+  'Login',
+  'Solicitação',
+  'Dashboard Admin',
+  'Dashboard Gestor',
+  'Acampamentos',
+  'Equipes',
+  'Times',
+  'Participantes',
+  'Pontuação',
+  'Histórico',
+  'Gincanas',
+  'Inspeções',
+  'Ranking Público',
+  'Exportação',
+])
