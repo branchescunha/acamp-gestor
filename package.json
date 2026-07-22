@@ -8,6 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test src/domain/__tests__/*.test.js src/utils/__tests__/*.test.js src/features/export/__tests__/*.test.js src/features/participants/__tests__/*.test.js src/features/scores/__tests__/*.test.js",
+    "test:integration": "node --test tests/integration/*.test.js",
+    "test:all": "npm test && npm run test:integration",
     "preview": "vite preview",
     "format": "prettier . --write"
   },
