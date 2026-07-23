@@ -286,7 +286,7 @@ A V1 está funcionalmente implementada e passou pelas validações automatizadas
 
 Validação automatizada atual:
 
-- 27 testes automatizados;
+- 66 testes automatizados;
 - lint aprovado;
 - build de produção aprovado.
 
